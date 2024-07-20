@@ -3,7 +3,7 @@ import sys
 import subprocess
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor, QFont
-from PyQt5.QtCore import QTimer, Qt, QPoint, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QPoint, QThread, pyqtSignal
 
 class X11Interface:
     def __init__(self):
@@ -50,12 +50,9 @@ class UpdateThread(QThread):
                 image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
 
                 # Scale image to % of the original size
-                scale_factor = 0.085
+                scale_factor = 0.06
 
-                # something going on were the right side of the preview gets cut off.
-                # this is a terrible hacky workaround that adds 100 pixels to the width but then we use KeepAspectRatio
-                # No idea why this works, but it does
-                new_width = int(original_width * scale_factor) + 100
+                new_width = int(original_width * scale_factor)
                 new_height = int(original_height * scale_factor)
                 image = image.scaled(new_width, new_height, Qt.KeepAspectRatio)
                 pixmap = QPixmap.fromImage(image)
@@ -63,7 +60,7 @@ class UpdateThread(QThread):
                 # Draw character name on pixmap
                 painter = QPainter(pixmap)
                 painter.setPen(QColor('white'))
-                painter.setFont(QFont('Arial', 10))
+                painter.setFont(QFont('Roboto Mono', 10))
                 if " - " in self.window_title:
                     character_name = self.window_title.split(" - ")[-1]
                 else:
@@ -77,6 +74,8 @@ class UpdateThread(QThread):
             self.msleep(self.interval)
 
 class WindowPreview(QWidget):
+    SNAP_DISTANCE = 20
+
     def __init__(self, x11_interface, window_id, window_title, previews):
         super().__init__()
         self.window_id = window_id
@@ -87,9 +86,11 @@ class WindowPreview(QWidget):
 
         layout = QVBoxLayout()
         layout.addWidget(self.label)
+        layout.setContentsMargins(0, 0, 0, 0)  # Remove any layout margins
         self.setLayout(layout)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setContentsMargins(0, 0, 0, 0)  # Remove widget margins
         self.capture_interval = 1000  # Capture every 1000 ms (1 second)
 
         self.dragging = False
@@ -101,7 +102,7 @@ class WindowPreview(QWidget):
 
     def set_pixmap(self, pixmap, new_width, new_height):
         self.label.setPixmap(pixmap)
-        self.setFixedSize(new_width, new_height + 20)  # Add extra height to accommodate the text
+        self.setFixedSize(new_width, new_height)
         self.adjustSize()
 
     def mousePressEvent(self, event):
@@ -117,7 +118,7 @@ class WindowPreview(QWidget):
         if self.dragging and event.buttons() & Qt.RightButton:
             new_position = event.globalPos() - self.drag_position
             self.move(new_position)
-            #print(f"Moving to: {new_position}")
+            self.snap_to_grid()
             event.accept()
 
     def mouseReleaseEvent(self, event):
@@ -125,6 +126,34 @@ class WindowPreview(QWidget):
             self.dragging = False
             print("Stopped dragging")
             event.accept()
+
+    def snap_to_grid(self):
+        for preview in self.previews:
+            if preview == self:
+                continue
+
+            r1 = self.frameGeometry()
+            r2 = preview.frameGeometry()
+
+            # Check for horizontal snapping
+            if abs(r1.right() - r2.left()) < self.SNAP_DISTANCE:
+                self.move(r2.left() - r1.width(), self.y())
+            elif abs(r1.left() - r2.right()) < self.SNAP_DISTANCE:
+                self.move(r2.right(), self.y())
+            elif abs(r1.left() - r2.left()) < self.SNAP_DISTANCE:
+                self.move(r2.left(), self.y())
+            elif abs(r1.right() - r2.right()) < self.SNAP_DISTANCE:
+                self.move(r2.right() - r1.width(), self.y())
+
+            # Check for vertical snapping
+            if abs(r1.bottom() - r2.top()) < self.SNAP_DISTANCE:
+                self.move(self.x(), r2.top() - r1.height())
+            elif abs(r1.top() - r2.bottom()) < self.SNAP_DISTANCE:
+                self.move(self.x(), r2.bottom())
+            elif abs(r1.top() - r2.top()) < self.SNAP_DISTANCE:
+                self.move(self.x(), r2.top())
+            elif abs(r1.bottom() - r2.bottom()) < self.SNAP_DISTANCE:
+                self.move(self.x(), r2.bottom() - r1.height())
 
 def main():
     app = QApplication(sys.argv)
