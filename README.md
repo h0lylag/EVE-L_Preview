@@ -1,0 +1,1 @@
+Quick and dirty EVE-O Preview implementation for Linux systems. I am a shit programmer and mostly used ChatGPT to make this. Please help make this better.
