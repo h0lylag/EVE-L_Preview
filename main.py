@@ -1,12 +1,10 @@
 import os
 import sys
-import time
-import threading
+import subprocess
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
-from PyQt5.QtGui import QPixmap, QImage, QMouseEvent
-from PyQt5.QtCore import QTimer, Qt, QPoint
-import subprocess
+from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtCore import QTimer, Qt, QPoint, QThread, pyqtSignal
 
 class X11Interface:
     def __init__(self):
@@ -32,37 +30,61 @@ class X11Interface:
         wmctrl_command = ['wmctrl', '-i', '-a', window_id]
         subprocess.call(wmctrl_command)
 
+    def list_windows(self):
+        # Using wmctrl to list all windows
+        result = subprocess.run(['wmctrl', '-l'], capture_output=True, text=True)
+        return result.stdout.splitlines()
+
+class UpdateThread(QThread):
+    updated = pyqtSignal(QPixmap, int, int)
+
+    def __init__(self, x11_interface, window_id, interval=1000):
+        super().__init__()
+        self.x11_interface = x11_interface
+        self.window_id = window_id
+        self.interval = interval
+
+    def run(self):
+        while True:
+            try:
+                raw_image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
+                image = QImage(raw_image.data, original_width, original_height, QImage.Format_RGB32)
+
+                # Scale image to 10% of the original size
+                new_width = int(original_width * 0.085)
+                new_height = int(original_height * 0.085)
+                image = image.scaled(new_width, new_height, Qt.KeepAspectRatio)
+                pixmap = QPixmap.fromImage(image)
+                self.updated.emit(pixmap, new_width, new_height)
+            except Exception as e:
+                print(f"Error updating preview: {e}")
+            self.msleep(self.interval)
+
 class WindowPreview(QWidget):
-    def __init__(self, x11_interface, window_id):
+    def __init__(self, x11_interface, window_id, previews):
         super().__init__()
         self.window_id = window_id
         self.x11_interface = x11_interface
+        self.previews = previews
         self.label = QLabel(self)
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         self.setLayout(layout)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedSize(420, 236)
-        self.capture_interval = 250  # Capture every 250 ms
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_preview)
-        self.timer.start(self.capture_interval)
+        self.capture_interval = 500  # Capture every 1000 ms (1 second)
 
         self.dragging = False
         self.drag_position = QPoint()
 
-    def update_preview(self):
-        try:
-            raw_image, width, height = self.x11_interface.capture_window(int(self.window_id, 16))
-            # Convert raw image to QImage
-            image = QImage(raw_image.data, width, height, QImage.Format_RGB32)
-            image = image.scaled(420, 236)
-            pixmap = QPixmap.fromImage(image)
-            self.label.setPixmap(pixmap)
-        except Exception as e:
-            print(f"Error updating preview: {e}")
+        self.update_thread = UpdateThread(x11_interface, window_id, self.capture_interval)
+        self.update_thread.updated.connect(self.set_pixmap)
+        self.update_thread.start()
+
+    def set_pixmap(self, pixmap, new_width, new_height):
+        self.label.setPixmap(pixmap)
+        self.setFixedSize(new_width, new_height)
+        self.adjustSize()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -70,25 +92,36 @@ class WindowPreview(QWidget):
         elif event.button() == Qt.RightButton:
             self.dragging = True
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+            print(f"Started dragging: {self.drag_position}")
             event.accept()
 
     def mouseMoveEvent(self, event):
         if self.dragging and event.buttons() & Qt.RightButton:
-            self.move(event.globalPos() - self.drag_position)
+            new_position = event.globalPos() - self.drag_position
+            self.move(new_position)
+            print(f"Moving to: {new_position}")
             event.accept()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.RightButton:
             self.dragging = False
+            print("Stopped dragging")
             event.accept()
 
 def main():
     app = QApplication(sys.argv)
     x11_interface = X11Interface()
 
-    window_id = "0x6600001"  # Change to your target window ID
-    preview_window = WindowPreview(x11_interface, window_id)
-    preview_window.show()
+    # List all windows and filter those with "EVE - " in the title
+    window_list = x11_interface.list_windows()
+    eve_windows = [line.split()[0] for line in window_list if "EVE - " in line]
+
+    # Create a preview window for each EVE window
+    preview_windows = []
+    for window_id in eve_windows:
+        preview_window = WindowPreview(x11_interface, window_id, preview_windows)
+        preview_window.show()
+        preview_windows.append(preview_window)
 
     sys.exit(app.exec_())
 
