@@ -50,7 +50,7 @@ class UpdateThread(QThread):
                 image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
 
                 # Scale image to % of the original size
-                scale_factor = 0.06
+                scale_factor = 0.075
 
                 new_width = int(original_width * scale_factor)
                 new_height = int(original_height * scale_factor)
