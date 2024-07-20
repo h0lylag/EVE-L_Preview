@@ -6,14 +6,15 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap, QImage, QMouseEvent
 from PyQt5.QtCore import QTimer, Qt, QPoint
-from Xlib import X, display
+import subprocess
 
 class X11Interface:
     def __init__(self):
-        self.display = display.Display()
-        self.root = self.display.screen().root
+        pass
 
     def capture_window(self, window_id):
+        from Xlib import X, display  # Importing here to avoid global import issues
+        self.display = display.Display()
         window = self.display.create_resource_object('window', window_id)
         geom = window.get_geometry()
         width, height = geom.width, geom.height
@@ -25,6 +26,11 @@ class X11Interface:
         raw_image = np.frombuffer(raw.data, dtype=np.uint8).reshape((height, width, 4))
 
         return raw_image, width, height
+
+    def focus_and_raise_window(self, window_id):
+        # Using wmctrl to bring the window to the front
+        wmctrl_command = ['wmctrl', '-i', '-a', window_id]
+        subprocess.call(wmctrl_command)
 
 class WindowPreview(QWidget):
     def __init__(self, x11_interface, window_id):
@@ -59,7 +65,9 @@ class WindowPreview(QWidget):
             print(f"Error updating preview: {e}")
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.LeftButton:
+            self.x11_interface.focus_and_raise_window(self.window_id)
+        elif event.button() == Qt.RightButton:
             self.dragging = True
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
