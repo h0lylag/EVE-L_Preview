@@ -1,9 +1,34 @@
 import os
 import sys
+import json
 import subprocess
+from datetime import datetime
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor, QFont
-from PyQt5.QtCore import Qt, QPoint, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QPoint, QThread, QTimer, pyqtSignal
+from Xlib.error import BadDrawable
+
+CONFIG_FILE = "EVE-L_Preview.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    return {
+        "metadata": {
+            "lastmodified": str(datetime.now())
+        },
+        "settings": {
+            "thumbnail_scaling": 7.5,
+            "thumbnail_opacity": 100
+        },
+        "thumbnail_position": {}
+    }
+
+def save_config(config):
+    config["metadata"]["lastmodified"] = str(datetime.now())
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
 
 class X11Interface:
     def __init__(self):
@@ -36,6 +61,7 @@ class X11Interface:
 
 class UpdateThread(QThread):
     updated = pyqtSignal(QPixmap, int, int)
+    error_occurred = pyqtSignal()
 
     def __init__(self, x11_interface, window_id, window_title, interval=1000):
         super().__init__()
@@ -50,7 +76,7 @@ class UpdateThread(QThread):
                 image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
 
                 # Scale image to % of the original size
-                scale_factor = 0.075
+                scale_factor = config["settings"]["thumbnail_scaling"] / 100
 
                 new_width = int(original_width * scale_factor)
                 new_height = int(original_height * scale_factor)
@@ -69,6 +95,9 @@ class UpdateThread(QThread):
                 painter.end()
 
                 self.updated.emit(pixmap, new_width, new_height)
+            except BadDrawable:
+                self.error_occurred.emit()
+                break
             except Exception as e:
                 print(f"Error updating preview: {e}")
             self.msleep(self.interval)
@@ -76,12 +105,13 @@ class UpdateThread(QThread):
 class WindowPreview(QWidget):
     SNAP_DISTANCE = 20
 
-    def __init__(self, x11_interface, window_id, window_title, previews):
+    def __init__(self, x11_interface, window_id, window_title, previews, config):
         super().__init__()
         self.window_id = window_id
         self.window_title = window_title
         self.x11_interface = x11_interface
         self.previews = previews
+        self.config = config
         self.label = QLabel(self)
 
         layout = QVBoxLayout()
@@ -91,6 +121,7 @@ class WindowPreview(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setContentsMargins(0, 0, 0, 0)  # Remove widget margins
+        self.setWindowOpacity(config["settings"]["thumbnail_opacity"] / 100)
         self.capture_interval = 1000  # Capture every 1000 ms (1 second)
 
         self.dragging = False
@@ -98,12 +129,18 @@ class WindowPreview(QWidget):
 
         self.update_thread = UpdateThread(x11_interface, window_id, window_title, self.capture_interval)
         self.update_thread.updated.connect(self.set_pixmap)
+        self.update_thread.error_occurred.connect(self.handle_error)
         self.update_thread.start()
+
+        self.load_position()
 
     def set_pixmap(self, pixmap, new_width, new_height):
         self.label.setPixmap(pixmap)
         self.setFixedSize(new_width, new_height)
         self.adjustSize()
+
+    def handle_error(self):
+        self.close()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -125,6 +162,7 @@ class WindowPreview(QWidget):
         if event.button() == Qt.RightButton:
             self.dragging = False
             print("Stopped dragging")
+            self.save_position()
             event.accept()
 
     def snap_to_grid(self):
@@ -155,20 +193,58 @@ class WindowPreview(QWidget):
             elif abs(r1.bottom() - r2.bottom()) < self.SNAP_DISTANCE:
                 self.move(self.x(), r2.bottom() - r1.height())
 
+    def load_position(self):
+        character_name = self.get_character_name()
+        if character_name in self.config["thumbnail_position"]:
+            pos = self.config["thumbnail_position"][character_name]
+            self.move(pos[0], pos[1])
+
+    def save_position(self):
+        character_name = self.get_character_name()
+        self.config["thumbnail_position"][character_name] = [self.x(), self.y()]
+        save_config(self.config)
+
+    def get_character_name(self):
+        if " - " in self.window_title:
+            return self.window_title.split(" - ")[-1]
+        return "Unknown"
+
+class WindowManager:
+    def __init__(self, x11_interface, config):
+        self.x11_interface = x11_interface
+        self.config = config
+        self.previews = []
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_previews)
+        self.timer.start(1000)
+
+    def update_previews(self):
+        window_list = self.x11_interface.list_windows()
+        eve_windows = [(line.split()[0], " ".join(line.split()[3:])) for line in window_list if "EVE - " in line]
+        current_ids = {preview.window_id for preview in self.previews}
+
+        new_windows = [(window_id, window_title) for window_id, window_title in eve_windows if window_id not in current_ids]
+        closed_windows = [preview for preview in self.previews if preview.window_id not in {window_id for window_id, _ in eve_windows}]
+
+        for window_id, window_title in new_windows:
+            preview = WindowPreview(self.x11_interface, window_id, window_title, self.previews, self.config)
+            preview.show()
+            self.previews.append(preview)
+
+        for preview in closed_windows:
+            self.previews.remove(preview)
+            preview.close()
+
 def main():
+    global config
     app = QApplication(sys.argv)
     x11_interface = X11Interface()
 
-    # List all windows and filter those with "EVE - " in the title
-    window_list = x11_interface.list_windows()
-    eve_windows = [(line.split()[0], " ".join(line.split()[3:])) for line in window_list if "EVE - " in line]
+    # Load config
+    config = load_config()
 
-    # Create a preview window for each EVE window
-    preview_windows = []
-    for window_id, window_title in eve_windows:
-        preview_window = WindowPreview(x11_interface, window_id, window_title, preview_windows)
-        preview_window.show()
-        preview_windows.append(preview_window)
+    # Create window manager
+    window_manager = WindowManager(x11_interface, config)
 
     sys.exit(app.exec_())
 
