@@ -3,8 +3,11 @@ import sys
 import json
 import subprocess
 from datetime import datetime
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor, QFont
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QSystemTrayIcon, QMenu, QAction, QVBoxLayout,
+    QCheckBox, QLabel, QWidget, QTabWidget
+)
+from PyQt5.QtGui import QIcon, QPixmap, QImage, QPainter, QColor, QFont
 from PyQt5.QtCore import Qt, QPoint, QThread, QTimer, pyqtSignal
 from Xlib.error import BadDrawable
 
@@ -20,7 +23,8 @@ def load_config():
         },
         "settings": {
             "thumbnail_scaling": 7.5,
-            "thumbnail_opacity": 100
+            "thumbnail_opacity": 100,
+            "application_position": [100, 100]
         },
         "thumbnail_position": {}
     }
@@ -118,7 +122,7 @@ class WindowPreview(QWidget):
         layout.addWidget(self.label)
         layout.setContentsMargins(0, 0, 0, 0)  # Remove any layout margins
         self.setLayout(layout)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.Widget | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setContentsMargins(0, 0, 0, 0)  # Remove widget margins
         self.setWindowOpacity(config["settings"]["thumbnail_opacity"] / 100)
@@ -235,17 +239,139 @@ class WindowManager:
             self.previews.remove(preview)
             preview.close()
 
+class GeneralTab(QWidget):
+    def __init__(self, parent=None):
+        super(GeneralTab, self).__init__(parent)
+        layout = QVBoxLayout()
+        
+        self.checkbox1 = QCheckBox("General option 1")
+        self.checkbox2 = QCheckBox("General option 2")
+        
+        layout.addWidget(self.checkbox1)
+        layout.addWidget(self.checkbox2)
+        
+        self.setLayout(layout)
+
+class SettingsTab(QWidget):
+    def __init__(self, parent=None):
+        super(SettingsTab, self).__init__(parent)
+        layout = QVBoxLayout()
+        
+        self.checkbox1 = QCheckBox("Settings option 1")
+        self.checkbox2 = QCheckBox("Settings option 2")
+        
+        layout.addWidget(self.checkbox1)
+        layout.addWidget(self.checkbox2)
+        
+        self.setLayout(layout)
+
+class ThumbnailsTab(QWidget):
+    def __init__(self, parent=None):
+        super(ThumbnailsTab, self).__init__(parent)
+        layout = QVBoxLayout()
+        
+        self.checkbox1 = QCheckBox("Thumbnails option 1")
+        self.checkbox2 = QCheckBox("Thumbnails option 2")
+        
+        layout.addWidget(self.checkbox1)
+        layout.addWidget(self.checkbox2)
+        
+        self.setLayout(layout)
+
+class ProfilesTab(QWidget):
+    def __init__(self, parent=None):
+        super(ProfilesTab, self).__init__(parent)
+        layout = QVBoxLayout()
+        
+        self.checkbox1 = QCheckBox("Profiles option 1")
+        self.checkbox2 = QCheckBox("Profiles option 2")
+        
+        layout.addWidget(self.checkbox1)
+        layout.addWidget(self.checkbox2)
+        
+        self.setLayout(layout)
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        
+        self.setWindowTitle("EVE-L Preview")
+        self.setGeometry(100, 100, 400, 300)
+        
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon("icon.png"))
+        
+        show_action = QAction("Show", self)
+        quit_action = QAction("Exit", self)
+        show_action.triggered.connect(self.show)
+        quit_action.triggered.connect(QApplication.instance().quit)
+        
+        tray_menu = QMenu()
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(quit_action)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+        
+        self.tray_icon.show()
+        
+        self.init_ui()
+        self.load_position()
+
+    def init_ui(self):
+        self.tabs = QTabWidget()
+        
+        self.general_tab = GeneralTab()
+        self.settings_tab = SettingsTab()
+        self.thumbnails_tab = ThumbnailsTab()
+        self.profiles_tab = ProfilesTab()
+        
+        self.tabs.addTab(self.general_tab, "General")
+        self.tabs.addTab(self.settings_tab, "Settings")
+        self.tabs.addTab(self.thumbnails_tab, "Thumbnails")
+        self.tabs.addTab(self.profiles_tab, "Profiles")
+        
+        self.setCentralWidget(self.tabs)
+    
+    def closeEvent(self, event):
+        self.save_position()
+        if self.isVisible():
+            event.ignore()
+            self.hide()
+            #self.tray_icon.showMessage(
+            #    "Tray Application",
+            #    "Application was minimized to tray.",
+            #    QSystemTrayIcon.Information,
+            #    2000
+            #)
+    
+    def on_tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show()
+            self.raise_()
+            self.activateWindow()
+    
+    def load_position(self):
+        pos = config["settings"].get("application_position", [100, 100])
+        self.move(pos[0], pos[1])
+    
+    def save_position(self):
+        config["settings"]["application_position"] = [self.x(), self.y()]
+        save_config(config)
+
 def main():
     global config
     app = QApplication(sys.argv)
-    x11_interface = X11Interface()
-
+    app.setQuitOnLastWindowClosed(False)
+    
     # Load config
     config = load_config()
-
-    # Create window manager
-    window_manager = WindowManager(x11_interface, config)
-
+    
+    # Create main window
+    window = MainWindow()
+    window_manager = WindowManager(X11Interface(), config)
+    window.show()
+    
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
