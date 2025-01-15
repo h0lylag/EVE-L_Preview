@@ -4,16 +4,17 @@ from .thumbnails_tab import ThumbnailsTab
 from .general_tab import GeneralTab
 from .settings_tab import SettingsTab
 from .profiles_tab import ProfilesTab
+from .hotkeys_tab import HotkeysTab  # ✅ Import HotkeysTab
 from utils.config import load_config, save_config
 
 class MainWindow(QMainWindow):
     def __init__(self, config, window_manager):
         super().__init__()
-        self.config = config  # ✅ Store config
+        self.config = config  
         self.setWindowTitle("EVE-L Preview")
         self.setGeometry(100, 100, 400, 300)
 
-        self.tray_icon = QSystemTrayIcon(QIcon("icon.png"), self)
+        self.tray_icon = QSystemTrayIcon(QIcon("assets/icon.png"), self)
         self.tray_icon.setToolTip("EVE-L Preview")
         tray_menu = QMenu()
         show_action = QAction("Show", self)
@@ -26,8 +27,9 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(ThumbnailsTab(self.config), "Thumbnails")  # ✅ Pass config properly
-        self.tabs.addTab(SettingsTab(self.config), "Settings")      # ✅ Pass config properly
-        self.tabs.addTab(ProfilesTab(self.config), "Profiles")      # ✅ Pass config properly
-        self.tabs.addTab(GeneralTab(self.config), "General")        # ✅ Pass config properly
+        self.tabs.addTab(ThumbnailsTab(self.config), "Thumbnails")  
+        self.tabs.addTab(SettingsTab(self.config), "Settings")      
+        self.tabs.addTab(ProfilesTab(self.config), "Profiles")      
+        self.tabs.addTab(GeneralTab(self.config), "General")        
+        self.tabs.addTab(HotkeysTab(self.config), "Hotkeys")  # ✅ Add Hotkeys tab
         self.setCentralWidget(self.tabs)
