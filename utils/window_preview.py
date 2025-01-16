@@ -51,8 +51,13 @@ class WindowPreview(QWidget):
             logging.debug(f"🟢 Applying active border to {self.window_id}")
 
             # ✅ Draw border OVER the image without shifting
-            painter.setPen(QColor("#47f73e"))  # Green border
-            painter.setFont(QFont("Arial", 12, QFont.Bold))
+            border_color = self.config["settings"].get("border_color", "#47f73e")
+            font_family = self.config["settings"].get("font_family", "Courier New")
+            font_size = self.config["settings"].get("font_size", 12)
+            font_weight = self.config["settings"].get("font_weight", QFont.Bold)
+
+            painter.setPen(QColor(border_color))
+            painter.setFont(QFont(font_family, font_size, font_weight))
             painter.drawRect(0, 0, new_width - 1, new_height - 1)
             painter.drawRect(1, 1, new_width - 3, new_height - 3)
 

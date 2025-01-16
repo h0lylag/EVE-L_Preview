@@ -9,12 +9,13 @@ DEFAULT_CONFIG = {
         "lastmodified": str(datetime.now())
     },
     "settings": {
-        "thumbnail_scaling": 7.5,
+        "thumbnail_scaling": 5.0,
         "thumbnail_opacity": 100,
         "application_position": [100, 100],
         "enable_borders": True,
         "active_border_color": "#47f73e",
-        "inactive_border_color": "#808080"
+        "inactive_border_color": "#808080",
+        "font_family": "Courier New"  # ✅ Add default font family
     },
     "thumbnail_position": {}
 }

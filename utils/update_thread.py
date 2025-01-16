@@ -33,7 +33,7 @@ class UpdateThread(QThread):
                     self.error_occurred.emit()
                     break
 
-                scale_factor = 0.075  # Assuming config["settings"]["thumbnail_scaling"] is 7.5
+                scale_factor = 0.060  # Assuming config["settings"]["thumbnail_scaling"] is 7.5
                 new_width = int(original_width * scale_factor)
                 new_height = int(original_height * scale_factor)
                 image = image.scaled(new_width, new_height, Qt.KeepAspectRatio)
