@@ -6,13 +6,13 @@ from utils.config import save_config
 import logging
 
 class WindowPreview(QWidget):
-    SNAP_DISTANCE = 20  # ✅ Keep snapping enabled
+    SNAP_DISTANCE = 20  # Keep snapping enabled
 
     def __init__(self, x11_interface, window_id, window_title, previews, config, manager, hotkey_manager):
         super().__init__()
         self.window_id = window_id
         self.window_title = window_title
-        self.hotkey_manager = hotkey_manager  # ✅ Add hotkey_manager
+        self.hotkey_manager = hotkey_manager  # Add hotkey_manager
         self.x11_interface = x11_interface
         self.previews = previews
         self.config = config
@@ -37,20 +37,20 @@ class WindowPreview(QWidget):
         self.update_thread.error_occurred.connect(self.handle_error)
         self.update_thread.start()
 
-        self.load_position()  # ✅ Restore position loading
+        self.load_position()  # Restore position loading
 
     def set_pixmap(self, pixmap, new_width, new_height):
         """Apply a border effect directly to the screenshot without shifting the image."""
-        bordered_pixmap = QPixmap(new_width, new_height)  # ✅ Create a blank image with same dimensions
-        bordered_pixmap.fill(Qt.transparent)  # ✅ Keep transparency
+        bordered_pixmap = QPixmap(new_width, new_height)  # Create a blank image with same dimensions
+        bordered_pixmap.fill(Qt.transparent)  # Keep transparency
 
         painter = QPainter(bordered_pixmap)
-        painter.drawPixmap(0, 0, pixmap)  # ✅ Draw the original image first
+        painter.drawPixmap(0, 0, pixmap)  # Draw the original image first
 
         if self.manager.get_last_active_client() == self.window_id:
-            logging.debug(f"🟢 Applying active border to {self.window_id}")
+            logging.debug(f"Applying active border to {self.window_id}")
 
-            # ✅ Draw border OVER the image without shifting
+            # Draw border OVER the image without shifting
             border_color = self.config["settings"].get("border_color", "#47f73e")
             font_family = self.config["settings"].get("font_family", "Courier New")
             font_size = self.config["settings"].get("font_size", 12)
@@ -63,7 +63,7 @@ class WindowPreview(QWidget):
 
         painter.end()
 
-        self.label.setPixmap(bordered_pixmap)  # ✅ Apply new pixmap
+        self.label.setPixmap(bordered_pixmap)  # Apply new pixmap
         self.setFixedSize(new_width, new_height)
         self.adjustSize()
 
@@ -75,7 +75,7 @@ class WindowPreview(QWidget):
         character_name = self.get_character_name()
         if character_name in self.config["thumbnail_position"]:
             pos = self.config["thumbnail_position"][character_name]
-            logging.debug(f"🟢 Loading position for {character_name}: {pos}")
+            logging.debug(f"Loading position for {character_name}: {pos}")
             self.move(pos[0], pos[1])
 
     def save_position(self):
@@ -83,7 +83,7 @@ class WindowPreview(QWidget):
         character_name = self.get_character_name()
         self.config["thumbnail_position"][character_name] = [self.x(), self.y()]
         save_config(self.config)
-        logging.debug(f"💾 Saved position for {character_name}: {self.x()}, {self.y()}")
+        logging.debug(f"Saved position for {character_name}: {self.x()}, {self.y()}")
 
     def get_character_name(self):
         """Extract character name from window title."""
@@ -94,16 +94,16 @@ class WindowPreview(QWidget):
     def mousePressEvent(self, event):
         """Detect left or right-click interactions."""
         if event.button() == Qt.LeftButton:
-            logging.debug(f"🖱️ Left-click on {self.window_id} - bringing to front.")
+            logging.debug(f"Left-click on {self.window_id} - bringing to front.")
             # Always bring the clicked window to the front
             self.x11_interface.focus_and_raise_window(self.window_id)
             if self.manager.get_last_active_client() != self.window_id:
-                self.manager.set_last_active_client(self.window_id)  # ✅ Track clicked clients
-                self.manager.hotkey_manager.update_current_index(self.window_id)  # ✅ Update current index
+                self.manager.set_last_active_client(self.window_id)  # Track clicked clients
+                self.manager.hotkey_manager.update_current_index(self.window_id)  # Update current index
             else:
-                logging.debug(f"🟢 Window {self.window_id} is already the active window.")
+                logging.debug(f"Window {self.window_id} is already the active window.")
         elif event.button() == Qt.RightButton:
-            logging.debug(f"🖱️ Right-click on {self.window_id} - start dragging.")
+            logging.debug(f"Right-click on {self.window_id} - start dragging.")
             self.dragging = True
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
@@ -111,16 +111,16 @@ class WindowPreview(QWidget):
     def mouseMoveEvent(self, event):
         """Handle dragging movement."""
         if self.dragging and event.buttons() & Qt.RightButton:
-            logging.debug(f"📌 Dragging window {self.window_id}")
+            logging.debug(f"Dragging window {self.window_id}")
             new_position = event.globalPos() - self.drag_position
             self.move(new_position)
-            self.snap_to_grid()  # ✅ Keep snapping
+            self.snap_to_grid()
             event.accept()
 
     def mouseReleaseEvent(self, event):
         """Stop dragging and save new position."""
         if event.button() == Qt.RightButton:
-            logging.debug(f"📌 Released drag on {self.window_id} - saving position.")
+            logging.debug(f"Released drag on {self.window_id} - saving position.")
             self.dragging = False
             self.save_position()
             event.accept()

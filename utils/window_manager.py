@@ -7,9 +7,9 @@ class WindowManager(QObject):
         super().__init__()
         self.x11_interface = x11_interface
         self.config = config
-        self.hotkey_manager = hotkey_manager  # ✅ Add hotkey_manager
+        self.hotkey_manager = hotkey_manager  # Add hotkey_manager
         self.previews = []
-        self.last_active_window_id = None  # ✅ Track active window
+        self.last_active_window_id = None  # Track active window
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_previews)
         self.timer.start(1000)
@@ -33,10 +33,10 @@ class WindowManager(QObject):
 
     def set_last_active_client(self, window_id):
         """Updates which window is active and triggers UI update."""
-        logging.debug(f"🔄 Setting last active client: {window_id}")
+        logging.debug(f"Setting last active client: {window_id}")
         self.last_active_window_id = window_id
 
-        # ✅ Update previews to redraw active borders
+        # Update previews to redraw active borders
         for preview in self.previews:
             preview.update()
 

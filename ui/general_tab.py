@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QCheckBox
 from utils.config import save_config
 
 class GeneralTab(QWidget):
-    def __init__(self, config, parent=None):  # ✅ Accept config
+    def __init__(self, config, parent=None):  # Accept config
         super(GeneralTab, self).__init__(parent)
-        self.config = config  # ✅ Store config
+        self.config = config  # Store config
         layout = QVBoxLayout()
 
         self.checkbox1 = QCheckBox("General option 1")

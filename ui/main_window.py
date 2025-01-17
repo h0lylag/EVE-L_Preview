@@ -4,7 +4,7 @@ from .thumbnails_tab import ThumbnailsTab
 from .general_tab import GeneralTab
 from .settings_tab import SettingsTab
 from .profiles_tab import ProfilesTab
-from .hotkeys_tab import HotkeysTab  # ✅ Import HotkeysTab
+from .hotkeys_tab import HotkeysTab  # Import HotkeysTab
 from utils.config import load_config, save_config
 
 class MainWindow(QMainWindow):
@@ -31,5 +31,5 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(SettingsTab(self.config), "Settings")      
         self.tabs.addTab(ProfilesTab(self.config), "Profiles")      
         self.tabs.addTab(GeneralTab(self.config), "General")        
-        self.tabs.addTab(HotkeysTab(self.config), "Hotkeys")  # ✅ Add Hotkeys tab
+        self.tabs.addTab(HotkeysTab(self.config), "Hotkeys")  # Add Hotkeys tab
         self.setCentralWidget(self.tabs)

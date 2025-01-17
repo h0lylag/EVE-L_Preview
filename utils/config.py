@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
         "enable_borders": True,
         "active_border_color": "#47f73e",
         "inactive_border_color": "#808080",
-        "font_family": "Courier New"  # ✅ Add default font family
+        "font_family": "Courier New"
     },
     "thumbnail_position": {}
 }
