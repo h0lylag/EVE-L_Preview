@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt, QPoint, QThread, QTimer, pyqtSignal
 from Xlib.error import BadDrawable
 
 CONFIG_FILE = "EVE-L_Preview.json"
-
+os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r') as f:

@@ -11,7 +11,7 @@ def main():
     app.setQuitOnLastWindowClosed(False)
 
     config = load_config()
-    x11_interface = X11Interface()
+    x11_interface = X11Interface(config)
     window_manager = WindowManager(x11_interface, config)  # Remove None
 
     main_window = MainWindow(config, window_manager)

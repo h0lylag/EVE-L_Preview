@@ -33,11 +33,6 @@ class UpdateThread(QThread):
                     self.error_occurred.emit()
                     break
 
-                scale_factor = 0.060
-                new_width = int(original_width * scale_factor)
-                new_height = int(original_height * scale_factor)
-                image = image.scaled(new_width, new_height, Qt.KeepAspectRatio)
-
                 pixmap = QPixmap.fromImage(image)
 
                 # Draw character name
@@ -48,7 +43,7 @@ class UpdateThread(QThread):
                 painter.drawText(10, 20, character_name)
                 painter.end()
 
-                self.updated.emit(pixmap, new_width, new_height)
+                self.updated.emit(pixmap, original_width, original_height)
 
             except BadDrawable:
                 logging.error(f"BadDrawable error for window {self.window_id}. Stopping thread.")
