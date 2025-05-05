@@ -7,22 +7,20 @@ EVE‑L Preview – wlroots screencopy edition
   • Adds choose_mono_font() and forces QT_QPA_PLATFORM=xcb if Wayland plugin missing
 """
 
-import os, sys, json, subprocess, shutil, io
+import os, sys, json, subprocess, shutil
 from datetime import datetime
-
-# ───────── env guard – silence “wayland plugin” warning if needed ───────
-os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
-
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QSystemTrayIcon, QMenu, QAction, QVBoxLayout,
-    QCheckBox, QLabel, QWidget, QTabWidget, QLineEdit
+    QApplication, QVBoxLayout,
+    QLabel, QWidget
 )
 from PyQt5.QtGui import (
-    QIcon, QPixmap, QImage, QPainter, QColor, QFont, QFontDatabase, QGuiApplication
+    QPixmap, QImage, QPainter, QColor, QFont, QFontDatabase
 )
 from PyQt5.QtCore import Qt, QPoint, QThread, QTimer, pyqtSignal
 
 CONFIG_FILE = "EVE-L_Preview.json"
+CAPTURE_INTERVAL = 500  # milliseconds
+
 
 # ───────── Config helpers ────────────────────────────────────────────────
 def load_config():
@@ -68,7 +66,7 @@ def _maim_capture_window(win_id: int) -> QImage | None:
     maim flags used:
       • -i <id>         capture that specific window (no decorations)
       • -f jpg          encode as JPEG
-      • -q 80           80 % quality
+      • -m 2            2 quality
       • -o              write to stdout
     """
     if not shutil.which("maim"):
@@ -118,7 +116,7 @@ class UpdateThread(QThread):
     updated = pyqtSignal(QPixmap, int, int)
     error_occurred = pyqtSignal()
 
-    def __init__(self, iface: WindowInterface, win_id_hex: str, win_title: str, interval=1000):
+    def __init__(self, iface: WindowInterface, win_id_hex: str, win_title: str, interval=CAPTURE_INTERVAL):
         super().__init__()
         self.iface, self.win_title = iface, win_title
         self.win_id = int(win_id_hex, 16)

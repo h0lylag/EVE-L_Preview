@@ -1,60 +1,59 @@
 import logging
 import threading
-import evdev
 import subprocess
+import keyboard  # Replace evdev with keyboard
 
 # Enable logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class HotkeyManager:
-    def __init__(self, main_window, window_manager, device_path="/dev/input/event12"):
+    def __init__(self, main_window, window_manager):
         self.main_window = main_window
-        self.window_manager = window_manager  # Add window_manager
-        self.device_path = device_path  # Ensure only one device_path argument
-
+        self.window_manager = window_manager
         self.current_index = -1  # Track last active character
         self.shift_pressed = False
+        self.tab_pressed = False
+        
+        logging.info("Initializing HotkeyManager with keyboard library...")
+        
+        # Setup keyboard hooks
+        keyboard.on_press_key('shift', self.on_shift_press)
+        keyboard.on_release_key('shift', self.on_shift_release)
+        keyboard.on_press_key('tab', self.on_tab_press)
+        keyboard.on_release_key('tab', self.on_tab_release)
+        
+        logging.info("Keyboard hooks registered for Tab and Shift+Tab.")
 
-        logging.info("Initializing HotkeyManager...")
-
-        # Start evdev hotkey listener in a separate thread
-        self.listener_thread = threading.Thread(target=self.evdev_event_loop, daemon=True)
-        self.listener_thread.start()
-        logging.info("Evdev Hotkey Listener started.")
-
-    def evdev_event_loop(self):
-        """Listen for Tab and Shift+Tab key events using evdev."""
-        try:
-            device = evdev.InputDevice(self.device_path)
-            logging.info(f"Listening for key events on {self.device_path} ({device.name})")
-
-            for event in device.read_loop():
-                if event.type == evdev.ecodes.EV_KEY:
-                    key_code = event.code  # Captures the key code
-                    key_state = event.value  # 0 = release, 1 = press, 2 = hold
-
-                    if key_code == evdev.ecodes.KEY_TAB and key_state == 1:
-                        logging.debug("Tab key detected!")
-                        if self.is_eve_window_active():
-                            if self.shift_pressed:
-                                logging.debug("Shift + Tab detected - cycling backward")
-                                self.cycle_characters(reverse=True)
-                            else:
-                                logging.debug("Tab key pressed - cycling forward")
-                                self.cycle_characters(reverse=False)
-                        else:
-                            logging.debug("No active EVE window detected, ignoring hotkey.")
-
-                    elif key_code in [evdev.ecodes.KEY_LEFTSHIFT, evdev.ecodes.KEY_RIGHTSHIFT]:
-                        self.shift_pressed = key_state == 1
-
-        except Exception as e:
-            logging.error(f"Error in evdev event loop: {e}")
+    def on_shift_press(self, e):
+        """Track shift key press state"""
+        self.shift_pressed = True
+        
+    def on_shift_release(self, e):
+        """Track shift key release state"""
+        self.shift_pressed = False
+        
+    def on_tab_press(self, e):
+        """Handle tab key press - only process once per press"""
+        if not self.tab_pressed and self.is_eve_window_active():
+            self.tab_pressed = True
+            logging.debug("Tab key detected!")
+            
+            if self.shift_pressed:
+                logging.debug("Shift + Tab detected - cycling backward")
+                self.cycle_characters(reverse=True)
+            else:
+                logging.debug("Tab key pressed - cycling forward")
+                self.cycle_characters(reverse=False)
+    
+    def on_tab_release(self, e):
+        """Reset tab pressed state on release"""
+        self.tab_pressed = False
 
     def is_eve_window_active(self):
         """Check if an EVE window is currently active and in focus."""
         try:
-            result = subprocess.run(['xdotool', 'getactivewindow', 'getwindowname'], capture_output=True, text=True)
+            result = subprocess.run(['xdotool', 'getactivewindow', 'getwindowname'], 
+                                     capture_output=True, text=True)
             active_window_name = result.stdout.strip()
             logging.debug(f"Active window name: {active_window_name}")
             return "EVE - " in active_window_name
@@ -106,7 +105,6 @@ class HotkeyManager:
         """List all open windows using `wmctrl`."""
         try:
             result = subprocess.run(['wmctrl', '-l'], capture_output=True, text=True)
-            logging.debug(f"Listing windows:\n{result.stdout}")
             return result.stdout.splitlines()
         except Exception as e:
             logging.error(f"Error listing windows: {e}")
@@ -120,7 +118,6 @@ class HotkeyManager:
             logging.info(f"Window {window_id} successfully brought to front.")
         except Exception as e:
             logging.error(f"Error bringing window {window_id} to front: {e}")
-
 
     def update_current_index(self, window_id):
         """Update the current index based on the active window."""
