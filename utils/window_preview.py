@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QFrame
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont
+from PyQt5.QtGui import QPixmap
 from utils.update_thread import UpdateThread
 from utils.config import save_config
 import logging
@@ -39,43 +39,15 @@ class WindowPreview(QWidget):
 
         self.load_position()  # Restore position loading
 
-        # Create border effect with a frame widget
-        self.border_frame = QFrame(self)
-        self.border_frame.setFrameShape(QFrame.Box)
-        self.border_frame.setLineWidth(3)
-        self.border_frame.raise_()  # Change lower() to raise_()
-
-        # Update border immediately on initialization
-        self.update_border()
-
     def set_pixmap(self, pixmap, new_width, new_height):
-        """Update screenshot and adjust border frame size"""
+        """Update screenshot - no border management needed"""
         self.label.setPixmap(pixmap)
         self.setFixedSize(new_width, new_height)
         self.adjustSize()
         
-        # Resize border frame to match new dimensions
-        if self.border_frame.isVisible():
-            self.border_frame.setGeometry(0, 0, self.width(), self.height())
-        
-        # Only update border during window switches, not every screen refresh
-        # Comment this out to reduce CPU usage:
-        # self.update_border()
-
-    def update_border(self):
-        """Frame-based border that avoids segfaults"""
-        if self.config["settings"].get("enable_borders", True):
-            if self.manager.get_last_active_client() == self.window_id:
-                border_color = self.config["settings"].get("active_border_color", "#47f73e")
-            else:
-                border_color = self.config["settings"].get("inactive_border_color", "#808080")
-            
-            # Simplified frame styling - don't mix setFrameShape with setStyleSheet
-            self.border_frame.setStyleSheet(f"background: transparent; border: 3px solid {border_color};")
-            self.border_frame.setGeometry(0, 0, self.width(), self.height())
-            self.border_frame.show()
-        else:
-            self.border_frame.hide()
+        # If this window is active, update border position
+        if self.manager.get_last_active_client() == self.window_id:
+            self.manager.active_border.update_position()
 
     def handle_error(self):
         self.close()

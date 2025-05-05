@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QTimer, QObject
 from utils.window_preview import WindowPreview
+from utils.window_border import BorderWindow
 import logging
 
 class WindowManager(QObject):
@@ -13,6 +14,7 @@ class WindowManager(QObject):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_previews)
         self.timer.start(1000)
+        self.active_border = BorderWindow(config)
 
     def update_previews(self):
         window_list = self.x11_interface.list_windows()
@@ -32,13 +34,17 @@ class WindowManager(QObject):
             preview.close()
 
     def set_last_active_client(self, window_id):
-        """Set the last active client and update all borders."""
+        """Set the last active client and update border."""
         logging.debug(f"Setting last active client: {window_id}")
-        self.last_active_window_id = window_id  # Use consistent variable name
+        self.last_active_window_id = window_id
         
-        # Immediately update all borders
-        self.refresh_borders()
-    
+        # Find the preview window matching this ID
+        for preview in self.previews:
+            if preview.window_id == window_id:
+                # Move border window to surround this preview
+                self.active_border.follow(preview)
+                break
+
     def refresh_borders(self):
         """Update borders on all preview windows."""
         for preview in self.previews:
