@@ -23,11 +23,20 @@ class WindowPreview(QWidget):
         layout.addWidget(self.label)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(
+            Qt.FramelessWindowHint | 
+            Qt.WindowStaysOnTopHint |
+            Qt.Tool  | 
+            Qt.X11BypassWindowManagerHint  # Add this to completely hide from taskbar on Linux
+        )
+        
+        # Add this attribute to prevent window from appearing in Alt+Tab
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setContentsMargins(0, 0, 0, 0)
         self.setWindowOpacity(config["settings"]["thumbnail_opacity"] / 100)
-        self.capture_interval = 1000  
+        self.capture_interval = 3000  
 
         self.dragging = False
         self.drag_position = QPoint()

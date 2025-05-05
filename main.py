@@ -9,6 +9,9 @@ from utils.x11_interface import X11Interface
 def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    
+    # Set application desktop file to group windows
+    app.setDesktopFileName("eve-l-preview")
 
     config = load_config()
     x11_interface = X11Interface(config)
