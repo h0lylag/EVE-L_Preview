@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QSystemTrayIcon, QAction, QMenu, QTabWidget
+from PyQt5.QtWidgets import QMainWindow, QSystemTrayIcon, QAction, QMenu, QTabWidget, QApplication
 from PyQt5.QtGui import QIcon
 from .thumbnails_tab import ThumbnailsTab
 from .general_tab import GeneralTab
@@ -12,7 +12,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config = config  
         self.setWindowTitle("EVE-L Preview")
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 600, 450)
 
         self.tray_icon = QSystemTrayIcon(QIcon("assets/icon.png"), self)
         self.tray_icon.setToolTip("EVE-L Preview")
@@ -20,7 +20,7 @@ class MainWindow(QMainWindow):
         show_action = QAction("Show", self)
         quit_action = QAction("Exit", self)
         show_action.triggered.connect(self.show)
-        quit_action.triggered.connect(self.close)
+        quit_action.triggered.connect(lambda: self.close())
         tray_menu.addAction(show_action)
         tray_menu.addAction(quit_action)
         self.tray_icon.setContextMenu(tray_menu)
@@ -33,3 +33,13 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(GeneralTab(self.config), "General")        
         self.tabs.addTab(HotkeysTab(self.config), "Hotkeys")  # Add Hotkeys tab
         self.setCentralWidget(self.tabs)
+
+    def closeEvent(self, event):
+        # This is called when self.close() is executed
+        if event.spontaneous():
+            # If user clicks X button, just hide and keep running
+            event.ignore()
+            self.hide()
+        else:
+            # If programmatically closed (i.e., Exit from tray)
+            QApplication.quit()

@@ -32,13 +32,17 @@ class WindowManager(QObject):
             preview.close()
 
     def set_last_active_client(self, window_id):
-        """Updates which window is active and triggers UI update."""
+        """Set the last active client and update all borders."""
         logging.debug(f"Setting last active client: {window_id}")
-        self.last_active_window_id = window_id
-
-        # Update previews to redraw active borders
+        self.last_active_window_id = window_id  # Use consistent variable name
+        
+        # Immediately update all borders
+        self.refresh_borders()
+    
+    def refresh_borders(self):
+        """Update borders on all preview windows."""
         for preview in self.previews:
-            preview.update()
+            preview.update_border()
 
     def get_last_active_client(self):
         """Returns the last active window ID."""

@@ -15,7 +15,7 @@ def main():
     window_manager = WindowManager(x11_interface, config)  # Remove None
 
     main_window = MainWindow(config, window_manager)
-    main_window.show()
+    main_window
 
     hotkey_manager = HotkeyManager(main_window, window_manager)
     window_manager.hotkey_manager = hotkey_manager  # Set hotkey_manager

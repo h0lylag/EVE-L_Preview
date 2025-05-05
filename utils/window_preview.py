@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QFrame
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont
 from utils.update_thread import UpdateThread
@@ -39,33 +39,43 @@ class WindowPreview(QWidget):
 
         self.load_position()  # Restore position loading
 
+        # Create border effect with a frame widget
+        self.border_frame = QFrame(self)
+        self.border_frame.setFrameShape(QFrame.Box)
+        self.border_frame.setLineWidth(3)
+        self.border_frame.raise_()  # Change lower() to raise_()
+
+        # Update border immediately on initialization
+        self.update_border()
+
     def set_pixmap(self, pixmap, new_width, new_height):
-        """Apply a border effect directly to the screenshot without shifting the image."""
-        bordered_pixmap = QPixmap(new_width, new_height)  # Create a blank image with same dimensions
-        bordered_pixmap.fill(Qt.transparent)  # Keep transparency
-
-        painter = QPainter(bordered_pixmap)
-        painter.drawPixmap(0, 0, pixmap)  # Draw the original image first
-
-        if self.manager.get_last_active_client() == self.window_id:
-            logging.debug(f"Applying active border to {self.window_id}")
-
-            # Draw border OVER the image without shifting
-            border_color = self.config["settings"].get("border_color", "#47f73e")
-            font_family = self.config["settings"].get("font_family", "Courier New")
-            font_size = self.config["settings"].get("font_size", 12)
-            font_weight = self.config["settings"].get("font_weight", QFont.Bold)
-
-            painter.setPen(QColor(border_color))
-            painter.setFont(QFont(font_family, font_size, font_weight))
-            painter.drawRect(0, 0, new_width - 1, new_height - 1)
-            painter.drawRect(1, 1, new_width - 3, new_height - 3)
-
-        painter.end()
-
-        self.label.setPixmap(bordered_pixmap)  # Apply new pixmap
+        """Update screenshot and adjust border frame size"""
+        self.label.setPixmap(pixmap)
         self.setFixedSize(new_width, new_height)
         self.adjustSize()
+        
+        # Resize border frame to match new dimensions
+        if self.border_frame.isVisible():
+            self.border_frame.setGeometry(0, 0, self.width(), self.height())
+        
+        # Only update border during window switches, not every screen refresh
+        # Comment this out to reduce CPU usage:
+        # self.update_border()
+
+    def update_border(self):
+        """Frame-based border that avoids segfaults"""
+        if self.config["settings"].get("enable_borders", True):
+            if self.manager.get_last_active_client() == self.window_id:
+                border_color = self.config["settings"].get("active_border_color", "#47f73e")
+            else:
+                border_color = self.config["settings"].get("inactive_border_color", "#808080")
+            
+            # Simplified frame styling - don't mix setFrameShape with setStyleSheet
+            self.border_frame.setStyleSheet(f"background: transparent; border: 3px solid {border_color};")
+            self.border_frame.setGeometry(0, 0, self.width(), self.height())
+            self.border_frame.show()
+        else:
+            self.border_frame.hide()
 
     def handle_error(self):
         self.close()
