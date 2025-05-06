@@ -62,3 +62,35 @@ class BorderWindow(QWidget):
         # Draw multiple lines inward from the edge
         for i in range(self.border_width):
             painter.drawRect(i, i, self.width() - i*2 - 1, self.height() - i*2 - 1)
+    
+    def mousePressEvent(self, event):
+        """Pass right-click drag events to target window"""
+        if event.button() == Qt.RightButton and self.target_window:
+            # Store drag start position
+            self.dragging = True
+            self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        """Move both border and target window together, with perfect synchronization"""
+        if self.dragging and event.buttons() & Qt.RightButton and self.target_window:
+            new_position = event.globalPos() - self.drag_position
+            
+            # Move the target window first
+            self.target_window.move(new_position)
+            
+            # Let it snap to grid
+            self.target_window.snap_to_grid()
+            
+            # Update border position to match the potentially snapped position
+            self.update_position()
+            
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        """End dragging and save position"""
+        if event.button() == Qt.RightButton and self.target_window:
+            self.dragging = False
+            # Save position in target window
+            self.target_window.save_position()
+            event.accept()

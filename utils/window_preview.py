@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
 from utils.update_thread import UpdateThread
-from utils.config import save_config
+from utils.config import save_config, PREVIEW_REFRESH_RATE
 import logging
 
 class WindowPreview(QWidget):
@@ -27,7 +27,7 @@ class WindowPreview(QWidget):
             Qt.FramelessWindowHint | 
             Qt.WindowStaysOnTopHint |
             Qt.Tool  | 
-            Qt.X11BypassWindowManagerHint  # Add this to completely hide from taskbar on Linux
+            Qt.X11BypassWindowManagerHint  # Add this to completely hide from taskbar
         )
         
         # Add this attribute to prevent window from appearing in Alt+Tab
@@ -36,7 +36,7 @@ class WindowPreview(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setContentsMargins(0, 0, 0, 0)
         self.setWindowOpacity(config["settings"]["thumbnail_opacity"] / 100)
-        self.capture_interval = 3000  
+        self.capture_interval = PREVIEW_REFRESH_RATE
 
         self.dragging = False
         self.drag_position = QPoint()

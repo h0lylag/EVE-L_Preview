@@ -4,6 +4,8 @@ from datetime import datetime
 
 CONFIG_FILE = "EVE-L_Preview.json"
 
+PREVIEW_REFRESH_RATE = 1500
+
 DEFAULT_CONFIG = {
     "metadata": {
         "lastmodified": str(datetime.now())
