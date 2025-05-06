@@ -4,7 +4,17 @@ from datetime import datetime
 
 CONFIG_FILE = "EVE-L_Preview.json"
 
-PREVIEW_REFRESH_RATE = 1500
+
+BASE_REFRESH_RATE = 500
+BASE_CLIENT_COUNT = 2
+RATE_PER_CLIENT = 250
+
+def calculate_refresh_rate(client_count):
+    """Calculate refresh rate based on number of clients"""
+    if (client_count <= BASE_CLIENT_COUNT):
+        return BASE_REFRESH_RATE
+    else:
+        return BASE_REFRESH_RATE + (client_count - BASE_CLIENT_COUNT) * RATE_PER_CLIENT
 
 DEFAULT_CONFIG = {
     "metadata": {
@@ -17,7 +27,8 @@ DEFAULT_CONFIG = {
         "enable_borders": True,
         "active_border_color": "#47f73e",
         "inactive_border_color": "#808080",
-        "font_family": "Courier New"
+        "font_family": "Courier New",
+        "dynamic_refresh": True  # Add option to toggle dynamic refresh
     },
     "thumbnail_position": {}
 }

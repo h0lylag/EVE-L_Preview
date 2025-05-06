@@ -2,6 +2,7 @@ from PyQt5.QtCore import QTimer, QObject
 from utils.window_preview import WindowPreview
 from utils.window_border import BorderWindow
 import logging
+from utils.config import calculate_refresh_rate
 
 class WindowManager(QObject):
     def __init__(self, x11_interface, config, hotkey_manager=None):
@@ -28,10 +29,12 @@ class WindowManager(QObject):
             preview = WindowPreview(self.x11_interface, window_id, window_title, self.previews, self.config, self, self.hotkey_manager)
             preview.show()
             self.previews.append(preview)
+            self.update_all_refresh_rates()
 
         for preview in closed_windows:
             self.previews.remove(preview)
             preview.close()
+            self.update_all_refresh_rates()
 
     def set_last_active_client(self, window_id):
         """Set the last active client and update border."""
@@ -53,3 +56,17 @@ class WindowManager(QObject):
     def get_last_active_client(self):
         """Returns the last active window ID."""
         return self.last_active_window_id
+
+    def update_all_refresh_rates(self):
+        """Update refresh rates for all preview windows based on client count"""
+        if not self.config["settings"].get("dynamic_refresh", True):
+            return
+            
+        client_count = len(self.previews)
+        new_rate = calculate_refresh_rate(client_count)
+        
+        logging.info(f"Adjusting refresh rate to {new_rate}ms for {client_count} clients")
+        
+        # Update all preview windows with new refresh rate
+        for preview in self.previews:
+            preview.update_refresh_rate(new_rate)
