@@ -62,43 +62,48 @@ class HotkeyManager:
             return False
 
     def cycle_characters(self, reverse=False):
-        """Cycle through the list of characters, skipping non-open ones."""
+        """Cycle through the list of characters, respecting the order in config."""
         logging.debug("Cycling characters...")
 
-        # Get character names from the UI
-        character_list = self.main_window.tabs.widget(4).get_character_list()
-        logging.debug(f"Character list from UI: {character_list}")
+        # Get character names from config in user-defined order
+        character_list = list(self.main_window.config["hotkeys"]["character_list"].keys())
+        logging.debug(f"Character list from config: {character_list}")
 
-        # Get a list of currently open EVE windows using `wmctrl`
+        # Get all open EVE windows
         open_windows = self.list_windows()
         eve_windows = [line for line in open_windows if "EVE - " in line]
         logging.debug(f"Open EVE Windows: {eve_windows}")
 
-        open_character_windows = []
+        # Create a dictionary of window_title -> window_id for easier lookup
+        window_dict = {}
         for window in eve_windows:
             parts = window.split(None, 3)
             if len(parts) < 4:
                 continue
             window_id = parts[0]
-            window_title = parts[3].replace("EVE - ", "")  
+            window_title = parts[3].replace("EVE - ", "")
+            window_dict[window_title] = window_id
 
-            if window_title in character_list:
-                open_character_windows.append((window_id, window_title))
+        # Create ordered list of open windows based on character_list order
+        ordered_windows = []
+        for char_name in character_list:
+            if char_name in window_dict:
+                ordered_windows.append((window_dict[char_name], char_name))
 
-        if not open_character_windows:
+        if not ordered_windows:
             logging.warning("No matching character windows open.")
             return
 
-        # Cycle to the next open character
+        # Cycle through windows in correct order
         if reverse:
-            self.current_index = (self.current_index - 1) % len(open_character_windows)
+            self.current_index = (self.current_index - 1) % len(ordered_windows)
         else:
-            self.current_index = (self.current_index + 1) % len(open_character_windows)
+            self.current_index = (self.current_index + 1) % len(ordered_windows)
 
-        next_window_id, next_character_name = open_character_windows[self.current_index]
+        next_window_id, next_character_name = ordered_windows[self.current_index]
 
         logging.info(f"Switching to: {next_character_name} (Window ID: {next_window_id})")
-        self.window_manager.set_last_active_client(next_window_id)  # Set last active client
+        self.window_manager.set_last_active_client(next_window_id)
         self.focus_window(next_window_id)
 
     def list_windows(self):
@@ -120,22 +125,49 @@ class HotkeyManager:
             logging.error(f"Error bringing window {window_id} to front: {e}")
 
     def update_current_index(self, window_id):
-        """Update the current index based on the active window."""
+        """
+        Update the current index based on the active window,
+        respecting the order in the character list.
+        """
+        # Get ordered character list from config
+        character_list = list(self.main_window.config["hotkeys"]["character_list"].keys())
+        
+        # Get open windows
         open_windows = self.list_windows()
         eve_windows = [line for line in open_windows if "EVE - " in line]
-
-        open_character_windows = []
+        
+        # Match window_id to character name
+        target_char_name = None
         for window in eve_windows:
             parts = window.split(None, 3)
             if len(parts) < 4:
                 continue
             win_id = parts[0]
-            window_title = parts[3].replace("EVE - ", "")
-
-            if window_title in self.main_window.tabs.widget(4).get_character_list():
-                open_character_windows.append((win_id, window_title))
-
-        for index, (win_id, _) in enumerate(open_character_windows):
             if win_id == window_id:
+                target_char_name = parts[3].replace("EVE - ", "")
+                break
+        
+        if not target_char_name:
+            return
+        
+        # Create ordered list of open windows
+        ordered_windows = []
+        window_dict = {}
+        for window in eve_windows:
+            parts = window.split(None, 3)
+            if len(parts) < 4:
+                continue
+            win_id = parts[0]
+            char_name = parts[3].replace("EVE - ", "")
+            window_dict[char_name] = win_id
+        
+        for char_name in character_list:
+            if char_name in window_dict:
+                ordered_windows.append((window_dict[char_name], char_name))
+        
+        # Find index of target window in ordered list
+        for index, (win_id, char_name) in enumerate(ordered_windows):
+            if char_name == target_char_name:
                 self.current_index = index
+                logging.debug(f"Updated current index to {index} ({char_name})")
                 break
