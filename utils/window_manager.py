@@ -32,6 +32,12 @@ class WindowManager(QObject):
             self.update_all_refresh_rates()
 
         for preview in closed_windows:
+            # Check if this is the active window before removing it
+            if self.last_active_window_id == preview.window_id:
+                # Hide the border window when active client closes
+                self.active_border.hide()
+                self.last_active_window_id = None
+                
             self.previews.remove(preview)
             preview.close()
             self.update_all_refresh_rates()
