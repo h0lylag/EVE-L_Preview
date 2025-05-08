@@ -17,7 +17,6 @@ class X11Interface:
     """
 
     def __init__(self, config):
-        self.lock = threading.Lock()
         self.config = config
 
     # ---------------- capture ------------------------------------------

@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
 from utils.update_thread import UpdateThread
-from utils.config import save_config, calculate_refresh_rate  # Replace import
+from utils.config import save_config, REFRESH_RATE
 import logging
 
 class WindowPreview(QWidget):
@@ -55,11 +55,8 @@ class WindowPreview(QWidget):
         self.setContentsMargins(0, 0, 0, 0)
         self.setWindowOpacity(config["settings"]["thumbnail_opacity"] / 100)
         
-        # Use the calculate_refresh_rate function instead of the constant
-        # This will automatically adapt based on client count
-        initial_client_count = len(previews) + 1  # +1 for this window being added
-        self.capture_interval = calculate_refresh_rate(initial_client_count)
 
+        self.capture_interval = REFRESH_RATE
         self.dragging = False
         self.drag_position = QPoint()
 
@@ -172,10 +169,3 @@ class WindowPreview(QWidget):
                 self.move(self.x(), r2.bottom() - r1.height())
 
         logging.debug(f"🔵 Snapped window {self.window_id} into position.")
-
-    def update_refresh_rate(self, new_rate):
-        """Update the refresh rate for this preview window"""
-        if self.capture_interval != new_rate:
-            logging.debug(f"Updating refresh rate for {self.window_title} to {new_rate}ms")
-            self.capture_interval = new_rate
-            self.update_thread.capture_interval = new_rate
