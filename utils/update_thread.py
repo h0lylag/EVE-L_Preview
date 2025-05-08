@@ -2,10 +2,6 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap
 from Xlib.error import BadDrawable
 import logging
-import threading
-
-# Enable logging
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class UpdateThread(QThread):
     updated = pyqtSignal(QPixmap, int, int)
@@ -17,16 +13,15 @@ class UpdateThread(QThread):
         self.window_id = window_id
         self.window_title = window_title
         self.interval = interval
-        self.lock = threading.Lock()  #Prevents race conditions with Xlib
 
     def run(self):
         while True:
             try:
-                logging.debug(f"Updating preview for window: {self.window_id}")
+                # Only log if debug level is enabled to reduce overhead
+                if logging.getLogger().isEnabledFor(logging.DEBUG):
+                    logging.debug(f"Updating preview for window: {self.window_id}")
                 
-                with self.lock:  # Ensure only one thread accesses X11 at a time
-                    # Get image and scale it
-                    image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
+                image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
                 
                 # Skip if image capture failed
                 if image is None:
