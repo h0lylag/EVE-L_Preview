@@ -19,10 +19,28 @@ class WindowPreview(QWidget):
         self.manager = manager
         self.label = QLabel(self)
 
+        # Create a separate label for the character name (overlay)
+        self.name_label = QLabel(self)
+        self.name_label.setStyleSheet("""
+            font: Roboto Mono, sans-serif;
+            background-color: transparent; 
+            color: white; 
+            padding: 2px 5px;
+            text-shadow: 1px 1px 1px #000;
+        """)
+        self.name_label.setText(self.get_character_name())
+        self.name_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.name_label.adjustSize()  # Let the label size itself based on content
+        
+        # Make sure the name label stays on top of the screenshot
+        self.name_label.raise_()
+        
+        # Main layout remains for the screenshot
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
+
         self.setWindowFlags(
             Qt.FramelessWindowHint | 
             Qt.WindowStaysOnTopHint |
@@ -53,9 +71,14 @@ class WindowPreview(QWidget):
         self.load_position()  # Restore position loading
 
     def set_pixmap(self, pixmap, new_width, new_height):
-        """Update screenshot - no border management needed"""
+        """Update screenshot without redrawing character name"""
+        # Just update the screenshot
         self.label.setPixmap(pixmap)
         self.setFixedSize(new_width, new_height)
+        
+        # Position the name label at the TOP of the window instead of bottom
+        self.name_label.setGeometry(0, 0, new_width, self.name_label.height())
+        
         self.adjustSize()
         
         # If this window is active, update border position

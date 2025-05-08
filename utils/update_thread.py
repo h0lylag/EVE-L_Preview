@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont
+from PyQt5.QtGui import QPixmap
 from Xlib.error import BadDrawable
 import logging
 import threading
@@ -25,23 +25,17 @@ class UpdateThread(QThread):
                 logging.debug(f"Updating preview for window: {self.window_id}")
                 
                 with self.lock:  # Ensure only one thread accesses X11 at a time
+                    # Get image and scale it
                     image, original_width, original_height = self.x11_interface.capture_window(int(self.window_id, 16))
                 
-                # Check if image capture failed
+                # Skip if image capture failed
                 if image is None:
                     logging.warning(f"Skipping update: Window {self.window_id} capture failed.")
                     self.error_occurred.emit()
                     break
 
+                # Convert to pixmap without drawing character name
                 pixmap = QPixmap.fromImage(image)
-
-                # Draw character name
-                painter = QPainter(pixmap)
-                painter.setPen(QColor('white'))
-                painter.setFont(QFont('Roboto Mono', 10))
-                character_name = self.window_title.split(" - ")[-1] if " - " in self.window_title else "Unknown"
-                painter.drawText(10, 20, character_name)
-                painter.end()
 
                 self.updated.emit(pixmap, original_width, original_height)
 
