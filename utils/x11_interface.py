@@ -60,29 +60,41 @@ class X11Interface:
     def focus_and_raise_window(window_id):
         # Convert to hex string if it's an int
         win_id = hex(window_id) if isinstance(window_id, int) else window_id
+        decimal_id = int(win_id, 16)
+        
         try:
-            # Method 1: Use wmctrl to activate the window
-            subprocess.call(["wmctrl", "-i", "-a", win_id])
+            # Method 1: Try KDE qdbus first (most direct)
+            result = subprocess.run([
+                "qdbus", "org.kde.KWin", "/KWin", 
+                "org.kde.KWin.activateWindow", str(decimal_id)
+            ], capture_output=True, text=True)
             
-            # Method 2: Use xdotool for better focusing
-            try:
-                # Convert back to decimal for xdotool
-                decimal_id = int(win_id, 16)
-                subprocess.call(["xdotool", "windowactivate", "--sync", str(decimal_id)])
-                
-                # Method 3: Trigger mouse enter event with 1-pixel jiggle
-                # This forces the window to recognize the mouse position
-                subprocess.call(["xdotool", "mousemove_relative", "--", "1", "0"])
-                subprocess.call(["xdotool", "mousemove_relative", "--", "-1", "0"])
-                
-                logging.debug(f"Successfully focused and triggered mouse events for window {win_id}")
-            except Exception as e:
-                logging.debug(f"xdotool focus failed: {e}")
+            if result.returncode == 0:
+                # KDE activation successful, now move mouse to trigger events
+                subprocess.call([
+                    "qdbus", "org.kde.kglobalaccel", "/component/kwin",
+                    "invokeShortcut", "MoveMouseToFocus"
+                ])
+                logging.debug(f"Successfully focused window {win_id} using KDE qdbus")
+                return
+            
+        except Exception as e:
+            logging.debug(f"KDE qdbus focus failed: {e}")
+        
+        try:
+            # Method 2: Fallback to wmctrl only (no xdotool dependency)
+            subprocess.call(["wmctrl", "-i", "-a", win_id])
+            logging.debug(f"Successfully focused window {win_id} using wmctrl fallback")
                     
         except Exception as e:
             logging.debug(f"Window focus failed: {e}")
 
     def list_windows(self):
-        res = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
-        logging.debug(f"Listing windows:\n{res.stdout}")
-        return res.stdout.splitlines()
+        """List windows using wmctrl (KDE doesn't expose window listing via D-Bus)"""
+        try:
+            res = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
+            logging.debug(f"Listed {len(res.stdout.splitlines())} windows using wmctrl")
+            return res.stdout.splitlines()
+        except Exception as e:
+            logging.error(f"wmctrl window listing failed: {e}")
+            return []
