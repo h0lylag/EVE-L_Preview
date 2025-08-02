@@ -1,0 +1,9 @@
+PyQt5
+python-xlib
+keyboard
+
+# System dependencies (not Python packages):
+# - wmctrl (system command for window control)
+# - maim (system command for screen capture - X11)
+# - grim (system command for screen capture - Wayland, optional)
+# - xwininfo (system command for window geometry, part of x11-utils)
