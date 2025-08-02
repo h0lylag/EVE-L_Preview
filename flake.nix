@@ -23,10 +23,12 @@
                 keyboard
               ]
             ))
+            wmctrl
+            xdotool
+            maim
             qt5.qtbase
             qt5.qtwayland
             qt5.qtimageformats
-            xorg.xwininfo
           ];
 
           shellHook = ''
