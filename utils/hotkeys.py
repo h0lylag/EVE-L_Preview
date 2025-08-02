@@ -13,27 +13,61 @@ class HotkeyManager:
         self.current_index = -1  # Track last active character
         self.shift_pressed = False
         self.tab_pressed = False
+        self.hotkeys_enabled = False
         
         logging.info("Initializing HotkeyManager with keyboard library...")
         
-        # Setup keyboard hooks
-        keyboard.on_press_key('shift', self.on_shift_press)
-        keyboard.on_release_key('shift', self.on_shift_release)
-        keyboard.on_press_key('tab', self.on_tab_press)
-        keyboard.on_release_key('tab', self.on_tab_release)
-        
-        logging.info("Keyboard hooks registered for Tab and Shift+Tab.")
+        try:
+            # Setup keyboard hooks
+            keyboard.on_press_key('shift', self.on_shift_press)
+            keyboard.on_release_key('shift', self.on_shift_release)
+            keyboard.on_press_key('tab', self.on_tab_press)
+            keyboard.on_release_key('tab', self.on_tab_release)
+            
+            self.hotkeys_enabled = True
+            logging.info("Keyboard hooks registered for Tab and Shift+Tab.")
+            
+        except ImportError as e:
+            if "You must be root" in str(e):
+                logging.warning("⚠️  Hotkeys disabled: The keyboard library requires root privileges on Linux.")
+                logging.warning("   To enable hotkeys, either:")
+                logging.warning("   1. Run with sudo: sudo python main.py")
+                logging.warning("   2. Or add your user to the 'input' group and reboot")
+                logging.warning("   The application will continue to work without hotkey support.")
+            else:
+                logging.warning(f"⚠️  Hotkeys disabled: Failed to initialize keyboard library: {e}")
+                
+        except Exception as e:
+            logging.warning(f"⚠️  Hotkeys disabled: Unexpected error initializing keyboard hooks: {e}")
+            logging.warning("   The application will continue to work without hotkey support.")
+
+    def is_hotkeys_enabled(self):
+        """Return whether hotkeys are currently enabled."""
+        return self.hotkeys_enabled
+    
+    def get_hotkey_status(self):
+        """Return a human-readable status of hotkey functionality."""
+        if self.hotkeys_enabled:
+            return "✅ Hotkeys enabled (Tab/Shift+Tab to cycle characters)"
+        else:
+            return "❌ Hotkeys disabled (requires root privileges or input group access)"
 
     def on_shift_press(self, e):
         """Track shift key press state"""
+        if not self.hotkeys_enabled:
+            return
         self.shift_pressed = True
         
     def on_shift_release(self, e):
         """Track shift key release state"""
+        if not self.hotkeys_enabled:
+            return
         self.shift_pressed = False
         
     def on_tab_press(self, e):
         """Handle tab key press - only process once per press"""
+        if not self.hotkeys_enabled:
+            return
         if not self.tab_pressed and self.is_eve_window_active():
             self.tab_pressed = True
             logging.debug("Tab key detected!")
@@ -47,6 +81,8 @@ class HotkeyManager:
     
     def on_tab_release(self, e):
         """Reset tab pressed state on release"""
+        if not self.hotkeys_enabled:
+            return
         self.tab_pressed = False
 
     def is_eve_window_active(self):
