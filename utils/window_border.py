@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor
 
 class BorderWindow(QWidget):
@@ -20,7 +20,7 @@ class BorderWindow(QWidget):
         # Add these three crucial attributes
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)  # Make it click-through
+        # Remove Qt.WA_TransparentForMouseEvents to handle mouse events ourselves
         self.setFocusPolicy(Qt.NoFocus)
         
         self.target_window = None
@@ -62,35 +62,36 @@ class BorderWindow(QWidget):
         # Draw multiple lines inward from the edge
         for i in range(self.border_width):
             painter.drawRect(i, i, self.width() - i*2 - 1, self.height() - i*2 - 1)
-    
+
     def mousePressEvent(self, event):
-        """Pass right-click drag events to target window"""
+        """Start dragging when right-clicking on border"""
         if event.button() == Qt.RightButton and self.target_window:
-            # Store drag start position
-            self.dragging = True
-            self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+            # Start dragging on the target window
+            self.target_window.dragging = True
+            self.target_window.drag_position = event.globalPos() - self.target_window.frameGeometry().topLeft()
             event.accept()
+        elif event.button() == Qt.LeftButton and self.target_window:
+            # Handle left-click to focus window
+            self.target_window.x11_interface.focus_and_raise_window(self.target_window.window_id)
+            if self.target_window.manager.get_last_active_client() != self.target_window.window_id:
+                self.target_window.manager.set_last_active_client(self.target_window.window_id)
+                self.target_window.manager.hotkey_manager.update_current_index(self.target_window.window_id)
 
     def mouseMoveEvent(self, event):
-        """Move both border and target window together, with perfect synchronization"""
-        if self.dragging and event.buttons() & Qt.RightButton and self.target_window:
-            new_position = event.globalPos() - self.drag_position
-            
-            # Move the target window first
+        """Handle dragging movement"""
+        if self.target_window and self.target_window.dragging and event.buttons() & Qt.RightButton:
+            new_position = event.globalPos() - self.target_window.drag_position
             self.target_window.move(new_position)
-            
-            # Let it snap to grid
-            self.target_window.snap_to_grid()
-            
-            # Update border position to match the potentially snapped position
+            # Update border position to follow the window
             self.update_position()
-            
             event.accept()
 
     def mouseReleaseEvent(self, event):
-        """End dragging and save position"""
-        if event.button() == Qt.RightButton and self.target_window:
-            self.dragging = False
-            # Save position in target window
+        """Stop dragging and snap"""
+        if event.button() == Qt.RightButton and self.target_window and self.target_window.dragging:
+            self.target_window.dragging = False
+            # Snap to grid and save position
+            self.target_window.snap_to_grid()
+            self.update_position()  # Update border after snapping
             self.target_window.save_position()
             event.accept()

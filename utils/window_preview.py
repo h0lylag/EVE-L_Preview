@@ -129,6 +129,9 @@ class WindowPreview(QWidget):
             logging.debug(f"Dragging window {self.window_id}")
             new_position = event.globalPos() - self.drag_position
             self.move(new_position)
+            # Update border position if this window has the active border
+            if self.manager.get_last_active_client() == self.window_id:
+                self.manager.active_border.update_position()
             # Don't snap during dragging - only snap when released
             event.accept()
 
@@ -139,10 +142,17 @@ class WindowPreview(QWidget):
             self.dragging = False
             # Snap to grid only when releasing the mouse
             self.snap_to_grid()
+            # Update border position if this window has the active border
+            if self.manager.get_last_active_client() == self.window_id:
+                self.manager.active_border.update_position()
             self.save_position()
             event.accept()
 
     def snap_to_grid(self):
+        # Don't snap if we're currently dragging
+        if self.dragging:
+            return
+            
         for preview in self.previews:
             if preview == self:
                 continue
