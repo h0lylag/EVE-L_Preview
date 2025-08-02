@@ -56,33 +56,71 @@ class X11Interface:
             return None, 0, 0
 
     # ---------------- misc helpers -------------------------------------
-    @staticmethod
-    def focus_and_raise_window(window_id):
-        # Convert to hex string if it's an int
-        win_id = hex(window_id) if isinstance(window_id, int) else window_id
-        decimal_id = int(win_id, 16)
-        
+    def get_kwin_window_id(self, x11_window_id):
+        """Map X11 window ID to KWin UUID by matching PIDs and window names"""
         try:
-            # Method 1: Try KDE qdbus first (most direct)
-            result = subprocess.run([
-                "qdbus", "org.kde.KWin", "/KWin", 
-                "org.kde.KWin.activateWindow", str(decimal_id)
+            # Get X11 window info using wmctrl
+            x11_hex = hex(x11_window_id) if isinstance(x11_window_id, int) else x11_window_id
+            x11_decimal = int(x11_hex, 16)
+            
+            # Get window info from wmctrl
+            wmctrl_result = subprocess.run(["wmctrl", "-l", "-p"], capture_output=True, text=True)
+            if wmctrl_result.returncode != 0:
+                return None
+                
+            x11_pid = None
+            x11_name = None
+            for line in wmctrl_result.stdout.splitlines():
+                parts = line.split(None, 4)
+                if len(parts) >= 5:
+                    win_id = int(parts[0], 16)
+                    if win_id == x11_decimal:
+                        x11_pid = parts[2]
+                        x11_name = parts[4]
+                        break
+            
+            if not x11_pid:
+                logging.debug(f"Could not find X11 window info for {x11_hex}")
+                return None
+            
+            # Search KWin windows and match by PID and name
+            kdotool_result = subprocess.run([
+                "kdotool", "search", "--pid", x11_pid, "--name", x11_name
             ], capture_output=True, text=True)
             
-            if result.returncode == 0:
-                # KDE activation successful, now move mouse to trigger events
-                subprocess.call([
-                    "qdbus", "org.kde.kglobalaccel", "/component/kwin",
-                    "invokeShortcut", "MoveMouseToFocus"
-                ])
-                logging.debug(f"Successfully focused window {win_id} using KDE qdbus")
-                return
-            
+            if kdotool_result.returncode == 0 and kdotool_result.stdout.strip():
+                kwin_uuid = kdotool_result.stdout.strip().split('\n')[0]
+                logging.debug(f"Mapped X11 {x11_hex} -> KWin {kwin_uuid}")
+                return kwin_uuid
+                
         except Exception as e:
-            logging.debug(f"KDE qdbus focus failed: {e}")
+            logging.debug(f"Failed to map X11 ID {x11_window_id} to KWin UUID: {e}")
+        
+        return None
+
+    def focus_and_raise_window(self, window_id):
+        # Convert to hex string if it's an int
+        win_id = hex(window_id) if isinstance(window_id, int) else window_id
         
         try:
-            # Method 2: Fallback to wmctrl only (no xdotool dependency)
+            # Method 1: Try kdotool with KWin UUID mapping
+            kwin_uuid = self.get_kwin_window_id(window_id)
+            if kwin_uuid:
+                result = subprocess.run([
+                    "kdotool", "windowactivate", kwin_uuid
+                ], capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    logging.debug(f"Successfully focused window {win_id} using kdotool")
+                    return
+                else:
+                    logging.debug(f"kdotool activation failed: {result.stderr}")
+            
+        except Exception as e:
+            logging.debug(f"kdotool focus failed: {e}")
+        
+        try:
+            # Method 2: Fallback to wmctrl
             subprocess.call(["wmctrl", "-i", "-a", win_id])
             logging.debug(f"Successfully focused window {win_id} using wmctrl fallback")
                     
@@ -90,7 +128,7 @@ class X11Interface:
             logging.debug(f"Window focus failed: {e}")
 
     def list_windows(self):
-        """List windows using wmctrl (KDE doesn't expose window listing via D-Bus)"""
+        """List windows using wmctrl (kdotool search doesn't provide same format)"""
         try:
             res = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
             logging.debug(f"Listed {len(res.stdout.splitlines())} windows using wmctrl")
