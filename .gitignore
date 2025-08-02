@@ -10,3 +10,5 @@ __pycache__
 captest.py
 kwin-ss.py
 hotkey_test.py
+thumbnail_test.py
+qt_plugin_test.py
