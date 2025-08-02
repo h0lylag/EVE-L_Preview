@@ -37,17 +37,20 @@
           ];
 
           shellHook = ''
-            export QT_PLUGIN_PATH=${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins
-            export QT_IMAGEFORMAT_PLUGINS=${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats:${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats
-            export QT_QPA_PLATFORM_PLUGIN_PATH=${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/platforms
-            echo "🖼️  Image format plugins: $QT_PLUGIN_PATH"
-            echo "🛠️  Dev-shell ready: Qt plugins in $QT_QPA_PLATFORM_PLUGIN_PATH"
-            echo "🖼️  Image plugins dir: $QT_IMAGEFORMAT_PLUGINS"
+            # Set up Qt plugin paths properly
+            export QT_PLUGIN_PATH="${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins:${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins"
+            # export QT_QPA_PLATFORM_PLUGIN_PATH="${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/platforms"
+
+            echo "🛠️  Dev-shell ready!"
+            echo "🖼️  Qt plugin path: $QT_PLUGIN_PATH"
+            echo "🖼️  Platform plugins: $QT_QPA_PLATFORM_PLUGIN_PATH"
 
             # List available image format plugins
             echo "📷 Available image format plugins:"
-            ls -la ${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   Plugin directory not found"
-            ls -la ${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   Plugin directory not found"
+            echo "   From qtbase:"
+            ls -la ${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   qtbase imageformats not found"
+            echo "   From qtimageformats:"
+            ls -la ${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   qtimageformats not found"
           '';
         };
       }
