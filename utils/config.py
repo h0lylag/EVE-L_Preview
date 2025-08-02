@@ -20,13 +20,26 @@ DEFAULT_CONFIG = {
         "inactive_border_color": "#808080",
         "font_family": "Courier New"
     },
-    "thumbnail_position": {}
+    "thumbnail_position": {},
+    "hotkeys": {
+        "character_list": {}
+    }
 }
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                # Ensure all required keys exist for backward compatibility
+                if "hotkeys" not in config:
+                    config["hotkeys"] = {"character_list": {}}
+                if "character_list" not in config.get("hotkeys", {}):
+                    config["hotkeys"]["character_list"] = {}
+                return config
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load config file {CONFIG_FILE}: {e}")
+            print("Using default configuration.")
     return DEFAULT_CONFIG
 
 def save_config(config):

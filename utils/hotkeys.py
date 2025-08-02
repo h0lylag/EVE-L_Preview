@@ -101,46 +101,56 @@ class HotkeyManager:
         """Cycle through the list of characters, respecting the order in config."""
         logging.debug("Cycling characters...")
 
-        # Get character names from config in user-defined order
-        character_list = list(self.main_window.config["hotkeys"]["character_list"].keys())
-        logging.debug(f"Character list from config: {character_list}")
+        try:
+            # Get character names from config in user-defined order with safe access
+            hotkeys_config = self.main_window.config.get("hotkeys", {})
+            character_list = list(hotkeys_config.get("character_list", {}).keys())
+            logging.debug(f"Character list from config: {character_list}")
 
-        # Get all open EVE windows
-        open_windows = self.list_windows()
-        eve_windows = [line for line in open_windows if "EVE - " in line]
-        logging.debug(f"Open EVE Windows: {eve_windows}")
+            if not character_list:
+                logging.warning("No characters configured in hotkeys. Please configure characters in the Hotkeys tab.")
+                return
 
-        # Create a dictionary of window_title -> window_id for easier lookup
-        window_dict = {}
-        for window in eve_windows:
-            parts = window.split(None, 3)
-            if len(parts) < 4:
-                continue
-            window_id = parts[0]
-            window_title = parts[3].replace("EVE - ", "")
-            window_dict[window_title] = window_id
+            # Get all open EVE windows
+            open_windows = self.list_windows()
+            eve_windows = [line for line in open_windows if "EVE - " in line]
+            logging.debug(f"Open EVE Windows: {eve_windows}")
 
-        # Create ordered list of open windows based on character_list order
-        ordered_windows = []
-        for char_name in character_list:
-            if char_name in window_dict:
-                ordered_windows.append((window_dict[char_name], char_name))
+            # Create a dictionary of window_title -> window_id for easier lookup
+            window_dict = {}
+            for window in eve_windows:
+                parts = window.split(None, 3)
+                if len(parts) < 4:
+                    continue
+                window_id = parts[0]
+                window_title = parts[3].replace("EVE - ", "")
+                window_dict[window_title] = window_id
 
-        if not ordered_windows:
-            logging.warning("No matching character windows open.")
-            return
+            # Create ordered list of open windows based on character_list order
+            ordered_windows = []
+            for char_name in character_list:
+                if char_name in window_dict:
+                    ordered_windows.append((window_dict[char_name], char_name))
 
-        # Cycle through windows in correct order
-        if reverse:
-            self.current_index = (self.current_index - 1) % len(ordered_windows)
-        else:
-            self.current_index = (self.current_index + 1) % len(ordered_windows)
+            if not ordered_windows:
+                logging.warning("No matching character windows open.")
+                return
 
-        next_window_id, next_character_name = ordered_windows[self.current_index]
+            # Cycle through windows in correct order
+            if reverse:
+                self.current_index = (self.current_index - 1) % len(ordered_windows)
+            else:
+                self.current_index = (self.current_index + 1) % len(ordered_windows)
 
-        logging.info(f"Switching to: {next_character_name} (Window ID: {next_window_id})")
-        self.window_manager.set_last_active_client(next_window_id)
-        self.focus_window(next_window_id)
+            next_window_id, next_character_name = ordered_windows[self.current_index]
+
+            logging.info(f"Switching to: {next_character_name} (Window ID: {next_window_id})")
+            self.window_manager.set_last_active_client(next_window_id)
+            self.focus_window(next_window_id)
+            
+        except Exception as e:
+            logging.error(f"Error cycling characters: {e}")
+            logging.error(f"Config structure: {self.main_window.config.keys()}")
 
     def list_windows(self):
         """List all open windows using `wmctrl`."""
@@ -165,45 +175,51 @@ class HotkeyManager:
         Update the current index based on the active window,
         respecting the order in the character list.
         """
-        # Get ordered character list from config
-        character_list = list(self.main_window.config["hotkeys"]["character_list"].keys())
-        
-        # Get open windows
-        open_windows = self.list_windows()
-        eve_windows = [line for line in open_windows if "EVE - " in line]
-        
-        # Match window_id to character name
-        target_char_name = None
-        for window in eve_windows:
-            parts = window.split(None, 3)
-            if len(parts) < 4:
-                continue
-            win_id = parts[0]
-            if win_id == window_id:
-                target_char_name = parts[3].replace("EVE - ", "")
-                break
-        
-        if not target_char_name:
-            return
-        
-        # Create ordered list of open windows
-        ordered_windows = []
-        window_dict = {}
-        for window in eve_windows:
-            parts = window.split(None, 3)
-            if len(parts) < 4:
-                continue
-            win_id = parts[0]
-            char_name = parts[3].replace("EVE - ", "")
-            window_dict[char_name] = win_id
-        
-        for char_name in character_list:
-            if char_name in window_dict:
-                ordered_windows.append((window_dict[char_name], char_name))
-        
-        # Find index of target window in ordered list
-        for index, (win_id, char_name) in enumerate(ordered_windows):
-            if char_name == target_char_name:
-                self.current_index = index
-                logging.debug(f"Updated current index to {index} ({char_name})")
-                break
+        try:
+            # Get ordered character list from config with safe access
+            hotkeys_config = self.main_window.config.get("hotkeys", {})
+            character_list = list(hotkeys_config.get("character_list", {}).keys())
+            
+            # Get open windows
+            open_windows = self.list_windows()
+            eve_windows = [line for line in open_windows if "EVE - " in line]
+            
+            # Match window_id to character name
+            target_char_name = None
+            for window in eve_windows:
+                parts = window.split(None, 3)
+                if len(parts) < 4:
+                    continue
+                win_id = parts[0]
+                if win_id == window_id:
+                    target_char_name = parts[3].replace("EVE - ", "")
+                    break
+            
+            if not target_char_name:
+                return
+            
+            # Create ordered list of open windows
+            ordered_windows = []
+            window_dict = {}
+            for window in eve_windows:
+                parts = window.split(None, 3)
+                if len(parts) < 4:
+                    continue
+                win_id = parts[0]
+                char_name = parts[3].replace("EVE - ", "")
+                window_dict[char_name] = win_id
+            
+            for char_name in character_list:
+                if char_name in window_dict:
+                    ordered_windows.append((window_dict[char_name], char_name))
+            
+            # Find index of target window in ordered list
+            for index, (win_id, char_name) in enumerate(ordered_windows):
+                if char_name == target_char_name:
+                    self.current_index = index
+                    logging.debug(f"Updated current index to {index} ({char_name})")
+                    break
+                    
+        except Exception as e:
+            logging.error(f"Error updating current index: {e}")
+            logging.error(f"Config structure: {self.main_window.config.keys()}")
