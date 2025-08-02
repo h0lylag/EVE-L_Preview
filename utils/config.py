@@ -2,7 +2,9 @@ import json
 import os
 from datetime import datetime
 
-CONFIG_FILE = "EVE-L_Preview.json"
+CONFIG_FOLDER = os.path.expanduser("~/.config/EVE-L_Preview")
+os.makedirs(CONFIG_FOLDER, exist_ok=True)
+CONFIG_FILE = os.path.join(CONFIG_FOLDER, "EVE-L_Preview.json")
 REFRESH_RATE = 1000
 
 DEFAULT_CONFIG = {
