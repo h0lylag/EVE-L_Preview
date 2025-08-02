@@ -1,40 +1,53 @@
 {
-  description = "My Python + PyQt5 + Xlib + keyboard dev shell";
+  description = "My PyQt5 + Xlib + keyboard dev shell";
 
   inputs = {
-    # pin to a fixed Nixpkgs for reproducibility
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
-    # helper for multi-system Flakes
     flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      ...
-    }:
+    { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          # optionally customize overlays, config, etc.
-        };
+        pkgs = import nixpkgs { inherit system; };
       in
       {
-        # this attr path is what `nix develop` will pick up
         devShells.default = pkgs.mkShell {
-          # pull in exactly the Python packages you need
-          buildInputs = with pkgs.python3Packages; [
-            pyqt5
-            python-xlib
-            keyboard
+          buildInputs = with pkgs; [
+            (python3.withPackages (
+              ps: with ps; [
+                pyqt5
+                xlib
+                keyboard
+                pillow # Add PIL for image processing as fallback
+              ]
+            ))
+            qt5.qtbase
+            qt5.qtwayland
+            qt5.qtimageformats # This provides JPEG, TIFF, WEBP support!
+            libjpeg # JPEG library
+            imagemagick # Add ImageMagick for testing
+            # Screen capture and window management tools
+            grim # Wayland screen capture
+            maim # X11 screen capture
+            wmctrl # Window management
+            xorg.xwininfo # Window geometry info
           ];
-          # optional: notify on shell entry
+
           shellHook = ''
-            echo "Python dev shell ready with PyQt5, Xlib & keyboard"
+            export QT_PLUGIN_PATH=${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins
+            export QT_IMAGEFORMAT_PLUGINS=${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats:${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats
+            export QT_QPA_PLATFORM_PLUGIN_PATH=${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/platforms
+            echo "🖼️  Image format plugins: $QT_PLUGIN_PATH"
+            echo "🛠️  Dev-shell ready: Qt plugins in $QT_QPA_PLATFORM_PLUGIN_PATH"
+            echo "🖼️  Image plugins dir: $QT_IMAGEFORMAT_PLUGINS"
+
+            # List available image format plugins
+            echo "📷 Available image format plugins:"
+            ls -la ${pkgs.qt5.qtimageformats}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   Plugin directory not found"
+            ls -la ${pkgs.qt5.qtbase}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/imageformats/ 2>/dev/null || echo "   Plugin directory not found"
           '';
         };
       }
