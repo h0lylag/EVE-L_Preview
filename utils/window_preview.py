@@ -92,6 +92,18 @@ class WindowPreview(QWidget):
             pos = self.config["thumbnail_position"][character_name]
             logging.debug(f"Loading position for {character_name}: {pos}")
             self.move(pos[0], pos[1])
+        else:
+            # New character - add to config with default position
+            default_pos = self.get_default_position()
+            self.config["thumbnail_position"][character_name] = default_pos
+            logging.debug(f"New character {character_name} - setting default position: {default_pos}")
+            self.move(default_pos[0], default_pos[1])
+            # Save the config immediately to persist the new character
+            save_config(self.config)
+
+    def get_default_position(self):
+        """Return a simple fixed default position for new characters."""
+        return [25, 1825]
 
     def save_position(self):
         """Save the current position of this preview to the config."""
