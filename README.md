@@ -1,6 +1,6 @@
 # EVE-L Preview
 
-Vibe-coded Linux implementation of EVE-O Preview
+Vibe-coded "native" Linux implementation of EVE-O Preview
 
 ## Features That Definitely Work™
 
@@ -24,6 +24,19 @@ python main.py
 nix develop
 python main.py
 ```
+
+## Dependencies
+
+### Python Packages
+- `PyQt5` - GUI framework
+- `python-xlib` - X11 interface
+- `keyboard` - Global hotkey support (requires root)
+
+### System Packages
+- `wmctrl` - Window management commands
+- `xdotool` - X11 automation utilities  
+- `maim` - Screenshot capture for thumbnails
+- `xwininfo` - Window geometry info (part of x11-utils)
 
 ## Configuration
 
