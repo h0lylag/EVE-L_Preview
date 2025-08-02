@@ -61,9 +61,26 @@ class X11Interface:
         # Convert to hex string if it's an int
         win_id = hex(window_id) if isinstance(window_id, int) else window_id
         try:
+            # Method 1: Use wmctrl to activate the window
             subprocess.call(["wmctrl", "-i", "-a", win_id])
+            
+            # Method 2: Use xdotool for more aggressive focusing
+            # This helps ensure the window gets proper keyboard/mouse focus
+            try:
+                # Convert back to decimal for xdotool
+                decimal_id = int(win_id, 16)
+                subprocess.call(["xdotool", "windowactivate", "--sync", str(decimal_id)])
+                logging.debug(f"Used xdotool to focus window {win_id}")
+            except subprocess.CalledProcessError:
+                # Fallback: try without --sync flag
+                try:
+                    subprocess.call(["xdotool", "windowactivate", str(decimal_id)])
+                    logging.debug(f"Used xdotool (no sync) to focus window {win_id}")
+                except Exception as e:
+                    logging.debug(f"xdotool focus failed: {e}")
+                    
         except Exception as e:
-            logging.debug(f"wmctrl focus failed: {e}")
+            logging.debug(f"Window focus failed: {e}")
 
     def list_windows(self):
         res = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
