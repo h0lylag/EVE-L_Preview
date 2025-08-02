@@ -129,7 +129,7 @@ class WindowPreview(QWidget):
             logging.debug(f"Dragging window {self.window_id}")
             new_position = event.globalPos() - self.drag_position
             self.move(new_position)
-            self.snap_to_grid()
+            # Don't snap during dragging - only snap when released
             event.accept()
 
     def mouseReleaseEvent(self, event):
@@ -137,6 +137,8 @@ class WindowPreview(QWidget):
         if event.button() == Qt.RightButton:
             logging.debug(f"Released drag on {self.window_id} - saving position.")
             self.dragging = False
+            # Snap to grid only when releasing the mouse
+            self.snap_to_grid()
             self.save_position()
             event.accept()
 
