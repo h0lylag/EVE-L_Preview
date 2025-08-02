@@ -64,20 +64,20 @@ class X11Interface:
             # Method 1: Use wmctrl to activate the window
             subprocess.call(["wmctrl", "-i", "-a", win_id])
             
-            # Method 2: Use xdotool for more aggressive focusing
-            # This helps ensure the window gets proper keyboard/mouse focus
+            # Method 2: Use xdotool for better focusing
             try:
                 # Convert back to decimal for xdotool
                 decimal_id = int(win_id, 16)
                 subprocess.call(["xdotool", "windowactivate", "--sync", str(decimal_id)])
-                logging.debug(f"Used xdotool to focus window {win_id}")
-            except subprocess.CalledProcessError:
-                # Fallback: try without --sync flag
-                try:
-                    subprocess.call(["xdotool", "windowactivate", str(decimal_id)])
-                    logging.debug(f"Used xdotool (no sync) to focus window {win_id}")
-                except Exception as e:
-                    logging.debug(f"xdotool focus failed: {e}")
+                
+                # Method 3: Trigger mouse enter event with 1-pixel jiggle
+                # This forces the window to recognize the mouse position
+                subprocess.call(["xdotool", "mousemove_relative", "--", "1", "0"])
+                subprocess.call(["xdotool", "mousemove_relative", "--", "-1", "0"])
+                
+                logging.debug(f"Successfully focused and triggered mouse events for window {win_id}")
+            except Exception as e:
+                logging.debug(f"xdotool focus failed: {e}")
                     
         except Exception as e:
             logging.debug(f"Window focus failed: {e}")
