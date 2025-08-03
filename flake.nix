@@ -25,6 +25,7 @@
             ))
             wmctrl
             kdotool
+            xdotool
             maim
             qt5.qtbase
             qt5.qtwayland

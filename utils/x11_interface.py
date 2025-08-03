@@ -111,6 +111,8 @@ class X11Interface:
                 ], capture_output=True, text=True)
                 
                 if result.returncode == 0:
+                    # Add mouse jiggle for EVE multiboxing workflow
+                    self._trigger_mouse_detection()
                     logging.debug(f"Successfully focused window {win_id} using kdotool")
                     return
                 else:
@@ -122,10 +124,52 @@ class X11Interface:
         try:
             # Method 2: Fallback to wmctrl
             subprocess.call(["wmctrl", "-i", "-a", win_id])
+            # Add mouse jiggle for EVE multiboxing workflow
+            self._trigger_mouse_detection()
             logging.debug(f"Successfully focused window {win_id} using wmctrl fallback")
                     
         except Exception as e:
             logging.debug(f"Window focus failed: {e}")
+
+    def _trigger_mouse_detection(self):
+        """Tiny mouse movement to trigger EVE's mouse detection for multiboxing"""
+        logging.debug("Attempting mouse jiggle for EVE multiboxing...")
+        try:
+            # More visible movement for testing: 5 pixels right, brief pause, then 5 pixels left
+            result1 = subprocess.run(["xdotool", "mousemove_relative", "1", "0"], 
+                         capture_output=True, text=True, timeout=1)
+            
+            # Small delay to make movement visible
+            import time
+            time.sleep(0.05)  # 50ms pause
+            
+            result2 = subprocess.run(["xdotool", "mousemove_relative", "--", "-1", "0"], 
+                         capture_output=True, text=True, timeout=1)
+            
+            if result1.returncode == 0 and result2.returncode == 0:
+                logging.debug("Mouse jiggle completed successfully")
+            else:
+                logging.debug(f"Mouse jiggle failed: result1={result1.returncode}, result2={result2.returncode}")
+                logging.debug(f"stderr1: {result1.stderr}, stderr2: {result2.stderr}")
+                
+        except subprocess.TimeoutExpired:
+            logging.debug("xdotool mouse jiggle timed out")
+        except FileNotFoundError:
+            logging.debug("xdotool not found, trying KDE shortcut fallback")
+            try:
+                result = subprocess.run([
+                    "qdbus", "org.kde.kglobalaccel", "/component/kwin",
+                    "invokeShortcut", "MoveMouseToFocus"
+                ], capture_output=True, text=True, timeout=1)
+                if result.returncode == 0:
+                    logging.debug("KDE MoveMouseToFocus shortcut executed")
+                else:
+                    logging.debug(f"KDE shortcut failed: {result.stderr}")
+            except Exception as kde_e:
+                logging.debug(f"KDE shortcut also failed: {kde_e}")
+        except Exception as e:
+            logging.debug(f"Mouse detection trigger failed: {e}")
+            pass
 
     def list_windows(self):
         """List windows using wmctrl (kdotool search doesn't provide same format)"""
