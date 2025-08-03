@@ -8,9 +8,10 @@ from .hotkeys_tab import HotkeysTab  # Import HotkeysTab
 from utils.config import load_config, save_config
 
 class MainWindow(QMainWindow):
-    def __init__(self, config, window_manager):
+    def __init__(self, config, window_manager, x11_interface):
         super().__init__()
         self.config = config  
+        self.x11_interface = x11_interface  # Store X11Interface for hotkey access
         self.setWindowTitle("EVE-L Preview")
         self.setGeometry(100, 100, 600, 450)
 

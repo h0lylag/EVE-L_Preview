@@ -162,11 +162,17 @@ class HotkeyManager:
             return []
 
     def focus_window(self, window_id):
-        """Bring a window to the front using `wmctrl`."""
+        """Bring a window to the front using the X11Interface for proper mouse detection."""
         logging.debug(f"🖥️ Attempting to bring window {window_id} to the front...")
         try:
-            subprocess.run(['wmctrl', '-i', '-a', window_id])
-            logging.info(f"Window {window_id} successfully brought to front.")
+            # Use the main window's X11Interface which includes mouse jiggle for EVE
+            if hasattr(self.main_window, 'x11_interface'):
+                self.main_window.x11_interface.focus_and_raise_window(window_id)
+                logging.info(f"Window {window_id} successfully brought to front with mouse trigger.")
+            else:
+                # Fallback to wmctrl if X11Interface not available
+                subprocess.run(['wmctrl', '-i', '-a', window_id])
+                logging.info(f"Window {window_id} successfully brought to front (fallback).")
         except Exception as e:
             logging.error(f"Error bringing window {window_id} to front: {e}")
 
