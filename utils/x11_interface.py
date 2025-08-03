@@ -112,7 +112,7 @@ class X11Interface:
                 
                 if result.returncode == 0:
                     # Add mouse jiggle for EVE multiboxing workflow
-                    self._trigger_mouse_detection()
+                    #self._trigger_mouse_detection()
                     logging.debug(f"Successfully focused window {win_id} using kdotool")
                     return
                 else:
@@ -125,7 +125,7 @@ class X11Interface:
             # Method 2: Fallback to wmctrl
             subprocess.call(["wmctrl", "-i", "-a", win_id])
             # Add mouse jiggle for EVE multiboxing workflow
-            self._trigger_mouse_detection()
+            #self._trigger_mouse_detection()
             logging.debug(f"Successfully focused window {win_id} using wmctrl fallback")
                     
         except Exception as e:
